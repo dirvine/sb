@@ -5,7 +5,6 @@ use pathdiff::diff_paths;
 use ratatui::{prelude::*, widgets::*};
 use ratatui_image::{picker::Picker, Resize, StatefulImage};
 use similar::{ChangeTag, TextDiff};
-use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use syntect::{easy::HighlightLines, highlighting::ThemeSet, parsing::SyntaxSet};
@@ -306,39 +305,7 @@ fn try_render_code_preview(f: &mut Frame, area: Rect) -> Option<()> {
     }
     let text = std::env::var("SB_CURRENT_TEXT").ok().unwrap_or_default();
 
-    // Highlight
-    let syntax = SYNTAX_SET
-        .find_syntax_by_extension(&ext)
-        .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text());
-    let theme_opt = THEME_SET
-        .themes
-        .get("base16-ocean.dark")
-        .or_else(|| THEME_SET.themes.values().next());
-    let mut lines: Vec<Line> = Vec::new();
-    if let Some(theme) = theme_opt {
-        let mut h = HighlightLines::new(syntax, theme);
-        for raw in text.lines() {
-            let regions = h.highlight_line(raw, &SYNTAX_SET).unwrap_or_default();
-            let mut spans: Vec<Span> = Vec::with_capacity(regions.len());
-            for (style, segment) in regions {
-                let fg = style.foreground;
-                let color = Color::Rgb(fg.r, fg.g, fg.b);
-                spans.push(Span::styled(
-                    segment.to_string(),
-                    Style::default().fg(color),
-                ));
-            }
-            lines.push(Line::from(spans));
-        }
-    } else {
-        // Fallback: plain text without colors
-        for raw in text.lines() {
-            lines.push(Line::from(raw.to_string()));
-        }
-    }
-
-    // Diff: git show HEAD:path vs current buffer
-    let mut diff_lines: Vec<Line> = Vec::new();
+    // Get git diff if available
     let rel_for_git = Command::new("git")
         .arg("rev-parse")
         .arg("--show-toplevel")
@@ -362,47 +329,187 @@ fn try_render_code_preview(f: &mut Frame, area: Rect) -> Option<()> {
     } else {
         format!("HEAD:{path}")
     };
-    if let Ok(output) = Command::new("git").args(["show", &spec]).output() {
-        if output.status.success() {
-            let original: Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
-            let current: Cow<'_, str> = Cow::from(text.as_str());
-            let diff = TextDiff::from_lines(&original, &current);
+
+    // Get original content from git if available
+    let original = Command::new("git")
+        .args(["show", &spec])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string());
+
+    // Prepare syntax highlighting
+    let syntax = SYNTAX_SET
+        .find_syntax_by_extension(&ext)
+        .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text());
+    let theme_opt = THEME_SET
+        .themes
+        .get("base16-ocean.dark")
+        .or_else(|| THEME_SET.themes.values().next());
+
+    let mut lines: Vec<Line> = Vec::new();
+    let has_diff = original.is_some();
+
+    // If we have a diff, show unified inline diff with syntax highlighting
+    if let Some(orig) = original {
+        let diff = TextDiff::from_lines(&orig, &text);
+        let mut line_num = 1;
+
+        if let Some(theme) = theme_opt {
+            let mut h = HighlightLines::new(syntax, theme);
+
             for change in diff.iter_all_changes() {
-                let (sign, color) = match change.tag() {
-                    ChangeTag::Delete => ("-", Color::Red),
-                    ChangeTag::Insert => ("+", Color::Green),
-                    ChangeTag::Equal => (" ", Color::DarkGray),
+                let line_content = change.to_string_lossy();
+                let line_trimmed = line_content.trim_end_matches('\n');
+
+                // Get syntax highlighting for the line content
+                let regions = h
+                    .highlight_line(line_trimmed, &SYNTAX_SET)
+                    .unwrap_or_default();
+                let mut spans: Vec<Span> = Vec::new();
+
+                // Add diff marker and line number
+                match change.tag() {
+                    ChangeTag::Delete => {
+                        spans.push(Span::styled(
+                            format!("{line_num:4} - "),
+                            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                        ));
+                        // Apply syntax highlighting with red tint
+                        for (style, segment) in regions {
+                            let fg = style.foreground;
+                            spans.push(Span::styled(
+                                segment.to_string(),
+                                Style::default()
+                                    .fg(Color::Rgb(
+                                        fg.r.saturating_sub(50),
+                                        fg.g.saturating_sub(100),
+                                        fg.b.saturating_sub(100),
+                                    ))
+                                    .add_modifier(Modifier::DIM),
+                            ));
+                        }
+                    }
+                    ChangeTag::Insert => {
+                        spans.push(Span::styled(
+                            format!("{line_num:4} + "),
+                            Style::default()
+                                .fg(Color::Green)
+                                .add_modifier(Modifier::BOLD),
+                        ));
+                        // Apply syntax highlighting with green tint
+                        for (style, segment) in regions {
+                            let fg = style.foreground;
+                            spans.push(Span::styled(
+                                segment.to_string(),
+                                Style::default().fg(Color::Rgb(
+                                    fg.r.saturating_sub(100),
+                                    fg.g,
+                                    fg.b.saturating_sub(100),
+                                )),
+                            ));
+                        }
+                        line_num += 1;
+                    }
+                    ChangeTag::Equal => {
+                        spans.push(Span::styled(
+                            format!("{line_num:4}   "),
+                            Style::default().fg(Color::DarkGray),
+                        ));
+                        // Normal syntax highlighting
+                        for (style, segment) in regions {
+                            let fg = style.foreground;
+                            spans.push(Span::styled(
+                                segment.to_string(),
+                                Style::default().fg(Color::Rgb(fg.r, fg.g, fg.b)),
+                            ));
+                        }
+                        line_num += 1;
+                    }
+                }
+                lines.push(Line::from(spans));
+            }
+        } else {
+            // Fallback without syntax highlighting
+            for change in diff.iter_all_changes() {
+                let (prefix, color) = match change.tag() {
+                    ChangeTag::Delete => (format!("{line_num:4} - "), Color::Red),
+                    ChangeTag::Insert => {
+                        let p = format!("{line_num:4} + ");
+                        line_num += 1;
+                        (p, Color::Green)
+                    }
+                    ChangeTag::Equal => {
+                        let p = format!("{line_num:4}   ");
+                        line_num += 1;
+                        (p, Color::Gray)
+                    }
                 };
-                let content = change.to_string();
-                let spans = vec![Span::styled(
-                    format!("{sign}{content}"),
-                    Style::default().fg(color),
-                )];
-                diff_lines.push(Line::from(spans));
+                let content = change.to_string_lossy();
+                lines.push(Line::from(vec![
+                    Span::styled(prefix, Style::default().fg(color)),
+                    Span::styled(content.to_string(), Style::default().fg(color)),
+                ]));
+            }
+        }
+    } else {
+        // No diff available, just show syntax highlighted code with line numbers
+        if let Some(theme) = theme_opt {
+            let mut h = HighlightLines::new(syntax, theme);
+            let mut line_num = 1;
+            for raw in text.lines() {
+                let regions = h.highlight_line(raw, &SYNTAX_SET).unwrap_or_default();
+                let mut spans: Vec<Span> = Vec::new();
+                spans.push(Span::styled(
+                    format!("{line_num:4}   "),
+                    Style::default().fg(Color::DarkGray),
+                ));
+                for (style, segment) in regions {
+                    let fg = style.foreground;
+                    let color = Color::Rgb(fg.r, fg.g, fg.b);
+                    spans.push(Span::styled(
+                        segment.to_string(),
+                        Style::default().fg(color),
+                    ));
+                }
+                lines.push(Line::from(spans));
+                line_num += 1;
+            }
+        } else {
+            // Fallback: plain text with line numbers
+            let mut line_num = 1;
+            for raw in text.lines() {
+                lines.push(Line::from(vec![
+                    Span::styled(
+                        format!("{line_num:4}   "),
+                        Style::default().fg(Color::DarkGray),
+                    ),
+                    Span::from(raw.to_string()),
+                ]));
+                line_num += 1;
             }
         }
     }
 
-    // Layout: top half highlighted, bottom half diff (if any)
-    let constraints = if diff_lines.is_empty() {
-        vec![Constraint::Min(area.height.max(1))]
+    // Render as a single unified view
+    let title = if has_diff {
+        format!("Code (Diff vs HEAD) - {path}")
     } else {
-        vec![Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)]
+        format!("Code - {path}")
     };
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(constraints)
-        .split(area);
-    let hl_para = Paragraph::new(Text::from(lines))
+
+    let para = Paragraph::new(Text::from(lines))
         .wrap(Wrap { trim: false })
-        .block(Block::default().title("Code").borders(Borders::ALL));
-    f.render_widget(hl_para, chunks[0]);
-    if !diff_lines.is_empty() {
-        let diff_para = Paragraph::new(Text::from(diff_lines))
-            .wrap(Wrap { trim: false })
-            .block(Block::default().title("Diff vs HEAD").borders(Borders::ALL));
-        f.render_widget(diff_para, chunks[1]);
-    }
+        .block(Block::default().title(title).borders(Borders::ALL))
+        .scroll((
+            std::env::var("SB_PREVIEW_SCROLL")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0),
+            0,
+        ));
+    f.render_widget(para, area);
+
     Some(())
 }
 
