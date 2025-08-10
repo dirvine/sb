@@ -2,6 +2,15 @@
 name = "sb"
 version = "0.1.0"
 edition = "2021"
+authors = ["David Irvine <david.irvine@maidsafe.net>"]
+description = "Terminal Markdown Browser/Editor with Vim-like features and media support"
+repository = "https://github.com/dirvine/sb"
+homepage = "https://github.com/dirvine/sb"
+documentation = "https://github.com/dirvine/sb"
+readme = "README.md"
+keywords = ["markdown", "terminal", "tui", "editor", "browser"]
+categories = ["command-line-utilities", "text-editors"]
+license = "MIT OR Apache-2.0"
 
 #[features]
 # All graphics and video are built-in by default now.

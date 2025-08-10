@@ -349,7 +349,8 @@ impl App {
     pub fn confirm_create_file(&mut self) -> Result<()> {
         let name = self
             .filename_input
-            .lines().first()
+            .lines()
+            .first()
             .cloned()
             .unwrap_or_default();
         let name = name.trim();
