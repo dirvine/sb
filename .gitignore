@@ -5,3 +5,10 @@ Cargo.lock
 
 # Claude helper script
 .claude-check
+
+# Test files (not for crates.io)
+test_*.rs
+test_*.py
+test_*.js
+test_*.ts
+__pycache__/
