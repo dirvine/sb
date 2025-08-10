@@ -299,7 +299,43 @@ fn try_render_code_preview(f: &mut Frame, area: Rect) -> Option<()> {
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_lowercase();
-    let is_code = matches!(ext.as_str(), "rs" | "ts" | "tsx" | "js" | "jsx" | "py");
+    let is_code = matches!(
+        ext.as_str(),
+        "rs" | "ts"
+            | "tsx"
+            | "js"
+            | "jsx"
+            | "py"
+            | "rb"
+            | "go"
+            | "java"
+            | "cpp"
+            | "c"
+            | "h"
+            | "hpp"
+            | "cs"
+            | "php"
+            | "swift"
+            | "kt"
+            | "scala"
+            | "sh"
+            | "bash"
+            | "zsh"
+            | "fish"
+            | "ps1"
+            | "yml"
+            | "yaml"
+            | "toml"
+            | "json"
+            | "xml"
+            | "html"
+            | "css"
+            | "scss"
+            | "sass"
+            | "sql"
+            | "md"
+            | "tex"
+    );
     if !is_code {
         return None;
     }
@@ -345,6 +381,9 @@ fn try_render_code_preview(f: &mut Frame, area: Rect) -> Option<()> {
     let theme_opt = THEME_SET
         .themes
         .get("base16-ocean.dark")
+        .or_else(|| THEME_SET.themes.get("Solarized (dark)"))
+        .or_else(|| THEME_SET.themes.get("Monokai"))
+        .or_else(|| THEME_SET.themes.get("InspiredGitHub"))
         .or_else(|| THEME_SET.themes.values().next());
 
     let mut lines: Vec<Line> = Vec::new();
