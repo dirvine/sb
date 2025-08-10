@@ -1,1 +1,0 @@
-/Users/davidirvine/Desktop/Devel/projects/saorsa-browser/target/debug/saoirse-browser: /Users/davidirvine/Desktop/Devel/projects/saorsa-browser/src/app.rs /Users/davidirvine/Desktop/Devel/projects/saorsa-browser/src/fs.rs /Users/davidirvine/Desktop/Devel/projects/saorsa-browser/src/main.rs /Users/davidirvine/Desktop/Devel/projects/saorsa-browser/src/preview.rs

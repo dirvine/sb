@@ -1,3 +1,7 @@
 
+# Build artifacts
+/target/
+Cargo.lock
+
 # Claude helper script
 .claude-check
