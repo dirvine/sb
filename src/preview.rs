@@ -164,8 +164,12 @@ pub fn render_preview(f: &mut Frame, area: Rect, preview: &Preview) {
         .direction(Direction::Vertical)
         .constraints(rows)
         .split(area);
-    // Render paragraph first, hide the default cursor and draw our own
-    let paragraph = paragraph; // mutable for style tweaks if needed
+    // Apply vertical scroll from env so caller can keep cursor in view
+    let scroll_top: u16 = std::env::var("SB_PREVIEW_SCROLL")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    let paragraph = paragraph.scroll((scroll_top, 0));
     f.render_widget(paragraph, chunks[0]);
 
     // If env says we have a cursor line to show raw, overlay a single-line raw view with line number gutter

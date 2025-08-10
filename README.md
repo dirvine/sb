@@ -48,9 +48,11 @@ cargo run --release -- /path/to/your/notes
   - N: new file (Markdown suggested)
 - Preview (Right pane)
   - Rendered Markdown with raw-line overlay (yellow) + line number gutter
-  - Inline edit: `e` or `i` to edit current line; Enter saves immediately; Esc cancels
+  - Scroll: Up/Down arrows or j/k; mouse wheel supported
+  - Raw edit toggle: press `e` to enter full raw edit; Esc to return to preview
 - Editor (Right pane)
   - `:` to open command prompt; supported: `:w`, `:q`, `:wq`
+  - Scroll with mouse wheel
 - Video playback (from `[video](path)` links in Markdown)
   - Autoplays first link in preview
   - Space: pause/resume, `s`: stop

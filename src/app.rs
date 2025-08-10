@@ -75,15 +75,18 @@ pub struct App {
     pub preview_cursor: usize,
     pub editing_line: bool,
     pub line_input: TextArea<'static>,
+    // Full raw edit mode in the preview pane
+    pub show_raw_editor: bool,
     // Editor command mode (minimal)
     pub editor_cmd_mode: bool,
     pub editor_cmd_input: TextArea<'static>,
     // Simple preview editing state
     pub preview_col: usize,
+    pub preview_scroll: usize,
+    pub preview_viewport: usize,
     pub undo_stack: Vec<Vec<String>>,
     pub redo_stack: Vec<Vec<String>>,
     pub autoplay_video: bool,
-    pub show_raw_editor: bool,
     // Video playback
     pub video_player: Option<VideoPlayer>,
     pub video_path: Option<PathBuf>,
@@ -128,13 +131,15 @@ impl App {
             preview_cursor: 0,
             editing_line: false,
             line_input: TextArea::default(),
+            show_raw_editor: false,
             editor_cmd_mode: false,
             editor_cmd_input: TextArea::default(),
             preview_col: 0,
+            preview_scroll: 0,
+            preview_viewport: 0,
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
             autoplay_video: false,
-            show_raw_editor: false,
             video_player: None,
             video_path: None,
         })
@@ -150,7 +155,7 @@ impl App {
             self.editor = TextArea::from(text.lines().map(|s| s.to_string()).collect::<Vec<_>>());
             self.opened = Some(path);
             self.status = "File opened".into();
-            self.focus = Focus::Editor;
+            self.focus = Focus::Preview;
         }
         Ok(())
     }
@@ -692,11 +697,25 @@ impl App {
         if self.preview_cursor > 0 {
             self.preview_cursor -= 1;
         }
+        let vp = self.preview_viewport.max(1);
+        if self.preview_cursor < self.preview_scroll {
+            self.preview_scroll = self.preview_cursor;
+        }
+        if self.preview_cursor >= self.preview_scroll.saturating_add(vp) {
+            self.preview_scroll = self.preview_cursor.saturating_sub(vp.saturating_sub(1));
+        }
     }
 
     pub fn move_cursor_down(&mut self) {
         if self.preview_cursor + 1 < self.editor.lines().len() {
             self.preview_cursor += 1;
+        }
+        let vp = self.preview_viewport.max(1);
+        if self.preview_cursor < self.preview_scroll {
+            self.preview_scroll = self.preview_cursor;
+        }
+        if self.preview_cursor >= self.preview_scroll.saturating_add(vp) {
+            self.preview_scroll = self.preview_cursor.saturating_sub(vp.saturating_sub(1));
         }
     }
 

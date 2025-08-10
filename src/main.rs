@@ -4,7 +4,10 @@ use std::time::Duration;
 
 use anyhow::Result;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers,
+        MouseEventKind,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -114,6 +117,20 @@ fn run(app: &mut App) -> Result<()> {
                         }
                         continue;
                     }
+                    // Raw edit mode in Preview: route keys to the text editor; Esc exits back to preview
+                    if app.show_raw_editor {
+                        match (k.code, k.modifiers) {
+                            (KeyCode::Esc, _) => {
+                                app.show_raw_editor = false;
+                            }
+                            _ => {
+                                if !app.editor_cmd_mode {
+                                    app.editor.input(k);
+                                }
+                            }
+                        }
+                        continue;
+                    }
                     if app.show_help {
                         match (k.code, k.modifiers) {
                             (KeyCode::Esc, _)
@@ -134,9 +151,14 @@ fn run(app: &mut App) -> Result<()> {
                         continue;
                     }
                     match (k.code, k.modifiers) {
-                        (KeyCode::Char('q'), _)
-                        | (KeyCode::Esc, _)
-                        | (KeyCode::Char('c'), KeyModifiers::CONTROL) => break,
+                        (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                            break
+                        }
+                        (KeyCode::Esc, _) => {
+                            if matches!(app.focus, Focus::Preview) {
+                                break;
+                            }
+                        }
                         (KeyCode::Tab, _) => {
                             app.focus = if app.show_left_pane {
                                 match app.focus {
@@ -238,9 +260,15 @@ fn run(app: &mut App) -> Result<()> {
                                 Focus::Preview => {}
                             }
                         }
-                        (KeyCode::Char('e'), _) | (KeyCode::Char('i'), _) => {
+                        // Hide files pane with 'H' when in Preview
+                        (KeyCode::Char('h'), _) => {
                             if matches!(app.focus, Focus::Preview) {
-                                app.begin_line_edit();
+                                app.show_left_pane = false;
+                            }
+                        }
+                        (KeyCode::Char('e'), _) => {
+                            if matches!(app.focus, Focus::Preview) {
+                                app.show_raw_editor = true;
                             }
                         }
                         (KeyCode::Up, _)
@@ -280,7 +308,35 @@ fn run(app: &mut App) -> Result<()> {
                         _ => {}
                     }
                 }
-                Event::Mouse(_) => {}
+                Event::Mouse(me) => match me.kind {
+                    MouseEventKind::ScrollDown => {
+                        if app.show_raw_editor {
+                            for _ in 0..3 {
+                                let _ = app
+                                    .editor
+                                    .input(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
+                            }
+                        } else if matches!(app.focus, Focus::Preview) {
+                            for _ in 0..3 {
+                                app.move_cursor_down();
+                            }
+                        }
+                    }
+                    MouseEventKind::ScrollUp => {
+                        if app.show_raw_editor {
+                            for _ in 0..3 {
+                                let _ = app
+                                    .editor
+                                    .input(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
+                            }
+                        } else if matches!(app.focus, Focus::Preview) {
+                            for _ in 0..3 {
+                                app.move_cursor_up();
+                            }
+                        }
+                    }
+                    _ => {}
+                },
                 Event::Resize(_, _) => {}
                 Event::FocusGained | Event::FocusLost | Event::Paste(_) => {}
             }
@@ -333,6 +389,7 @@ fn ui(f: &mut Frame, app: &mut App) {
         std::env::set_var("SB_CURRENT_TEXT", &text);
         std::env::set_var("SB_PREVIEW_CURSOR", app.preview_cursor.to_string());
         std::env::set_var("SB_PREVIEW_COL", app.preview_col.to_string());
+        std::env::set_var("SB_PREVIEW_SCROLL", app.preview_scroll.to_string());
     }
     let preview = if let Some(path) = app.opened.clone() {
         Preview::from_markdown(&path, &text).unwrap_or_else(|_| Preview {
@@ -357,8 +414,33 @@ fn ui(f: &mut Frame, app: &mut App) {
             app.stop_video();
         }
     }
-    // Always render preview in the right pane
-    preview::render_preview(f, chunks[1], &preview);
+    // Set preview viewport height (usable rows for text block)
+    let preview_text_rows = if app.show_left_pane {
+        chunks[1].height.saturating_sub(2)
+    } else {
+        chunks[1].height.saturating_sub(2)
+    } as usize;
+    app.preview_viewport = preview_text_rows;
+    // Clamp scroll to valid range against file length
+    let total_lines = app.editor.lines().len();
+    if app.preview_scroll + app.preview_viewport > total_lines.saturating_sub(1) {
+        app.preview_scroll = total_lines
+            .saturating_sub(app.preview_viewport)
+            .saturating_sub(0);
+    }
+    // Right pane: preview or full raw editor
+    if app.show_raw_editor {
+        let block = Block::default()
+            .title("Edit (raw)")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Green));
+        let area = chunks[1];
+        f.render_widget(block.clone(), area);
+        let inner = block.inner(area);
+        f.render_widget(&app.editor, inner);
+    } else {
+        preview::render_preview(f, chunks[1], &preview);
+    }
     // Editor command mode prompt overlays at bottom when active
     if app.editor_cmd_mode {
         let h = 1;
@@ -371,7 +453,7 @@ fn ui(f: &mut Frame, app: &mut App) {
         f.render_widget(Clear, area);
         f.render_widget(&app.editor_cmd_input, area);
     }
-    if matches!(app.focus, Focus::Preview) && app.editing_line {
+    if !app.show_raw_editor && matches!(app.focus, Focus::Preview) && app.editing_line {
         // Draw an inline single-line editor at the bottom of preview as a simple approach
         let h = 3;
         let area = Rect {
@@ -394,7 +476,7 @@ fn ui(f: &mut Frame, app: &mut App) {
     }
 
     // If a video is playing, overlay the last frame below the text area similar to images
-    if matches!(app.focus, Focus::Preview) {
+    if !app.show_raw_editor && matches!(app.focus, Focus::Preview) {
         if let Some(vp) = &app.video_player {
             if let Some(img) = vp.last_frame() {
                 let picker = ratatui_image::picker::Picker::from_query_stdio()
@@ -438,11 +520,35 @@ fn ui(f: &mut Frame, app: &mut App) {
         f.render_widget(p, area);
     }
 
+    // Footer hint in Preview to restore Files pane (one row above global status bar)
+    if matches!(app.focus, Focus::Preview)
+        && !app.show_raw_editor
+        && !app.show_left_pane
+        && !app.editor_cmd_mode
+        && !app.editing_line
+    {
+        let hint = "Press F9 to show Files pane";
+        let y = chunks[1].bottom().saturating_sub(2);
+        let x = chunks[1].x + 1;
+        let w = chunks[1].width.saturating_sub(2);
+        let area = Rect {
+            x,
+            y,
+            width: w,
+            height: 1,
+        };
+        f.render_widget(Clear, area);
+        let p = Paragraph::new(hint)
+            .style(Style::default().fg(Color::DarkGray))
+            .alignment(Alignment::Center);
+        f.render_widget(p, area);
+    }
+
     // --- Status bar
     let mut status_lines = vec![app.status.clone()];
     let files_state = if app.show_left_pane { "On" } else { "Off" };
     status_lines.push(format!("Files pane: {files_state} (Ctrl+B/F9 toggle)"));
-    status_lines.push("Keys: Tab/Shift+Tab focus | Enter open | F5 Copy | F6 Move | F7 Mkdir | F8 Delete | F4 Edit | Ctrl+I link | Ctrl+S save | Space pause video | s stop video | e edit-line | ? help | F10/Q quit".into());
+    status_lines.push("Keys: Tab/Shift+Tab focus | Enter open | F5 Copy | F6 Move | F7 Mkdir | F8 Delete | F4 Edit | Ctrl+I link | Ctrl+S save | Space pause video | s stop video | e edit raw | Esc: exit raw/quit | ? help | F10/Q quit".into());
     let status = Paragraph::new(status_lines.join("  ·  "))
         .style(Style::default().fg(Color::Yellow))
         .block(
