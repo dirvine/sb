@@ -123,13 +123,22 @@ fn run(app: &mut App) -> Result<()> {
                             (KeyCode::Esc, _) => {
                                 app.show_raw_editor = false;
                             }
+                            (KeyCode::Tab, _) => {
+                                // Exit raw editor and handle Tab normally to switch focus
+                                app.show_raw_editor = false;
+                                // Don't continue - let Tab be handled by the normal focus switching below
+                            }
                             _ => {
                                 if !app.editor_cmd_mode {
                                     app.editor.input(k);
                                 }
+                                continue;
                             }
                         }
-                        continue;
+                        // Only continue if we didn't handle Tab
+                        if k.code != KeyCode::Tab {
+                            continue;
+                        }
                     }
                     if app.show_help {
                         match (k.code, k.modifiers) {
