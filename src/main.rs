@@ -122,10 +122,12 @@ fn run(app: &mut App) -> Result<()> {
                         match (k.code, k.modifiers) {
                             (KeyCode::Esc, _) => {
                                 app.show_raw_editor = false;
+                                app.prefer_raw_editor = false;
                             }
                             (KeyCode::Tab, _) => {
-                                // Exit raw editor and handle Tab normally to switch focus
+                                // Temporarily exit raw editor but remember preference
                                 app.show_raw_editor = false;
+                                app.prefer_raw_editor = true;
                                 // Don't continue - let Tab be handled by the normal focus switching below
                             }
                             _ => {
@@ -188,6 +190,10 @@ fn run(app: &mut App) -> Result<()> {
                                     _ => Focus::Preview,
                                 }
                             };
+                            // Restore raw editor mode if user was in it and we're now on Editor focus
+                            if matches!(app.focus, Focus::Editor) && app.prefer_raw_editor {
+                                app.show_raw_editor = true;
+                            }
                         }
                         (KeyCode::BackTab, _) => {
                             app.focus = if app.show_left_pane {
@@ -202,6 +208,10 @@ fn run(app: &mut App) -> Result<()> {
                                     _ => Focus::Preview,
                                 }
                             };
+                            // Restore raw editor mode if user was in it and we're now on Editor focus
+                            if matches!(app.focus, Focus::Editor) && app.prefer_raw_editor {
+                                app.show_raw_editor = true;
+                            }
                         }
                         // 'p' previously toggled preview; now preview is always on, so ignore or repurpose later
                         (KeyCode::Char('?'), _) => app.toggle_help(),
@@ -253,6 +263,10 @@ fn run(app: &mut App) -> Result<()> {
                         (KeyCode::F(3), _) => { /* Quick view handled by preview always-on */ }
                         (KeyCode::F(4), _) => {
                             app.focus = Focus::Editor;
+                            // Restore raw editor mode if user prefers it
+                            if app.prefer_raw_editor {
+                                app.show_raw_editor = true;
+                            }
                         }
                         (KeyCode::F(5), _) => {
                             app.begin_copy();
@@ -285,6 +299,7 @@ fn run(app: &mut App) -> Result<()> {
                         (KeyCode::Char('e'), _) => {
                             if matches!(app.focus, Focus::Preview) {
                                 app.show_raw_editor = true;
+                                app.prefer_raw_editor = true;
                             }
                         }
                         (KeyCode::Up, _)
@@ -348,6 +363,35 @@ fn run(app: &mut App) -> Result<()> {
                         } else if matches!(app.focus, Focus::Preview) {
                             for _ in 0..3 {
                                 app.move_cursor_up();
+                            }
+                        }
+                    }
+                    MouseEventKind::Down(_) => {
+                        // Mouse click to change focus based on click position
+                        let _chunks = Layout::default()
+                            .direction(Direction::Horizontal)
+                            .constraints(if app.show_left_pane {
+                                [Constraint::Length(30), Constraint::Min(40)]
+                            } else {
+                                [Constraint::Length(0), Constraint::Min(40)]
+                            })
+                            .split(Rect {
+                                x: 0,
+                                y: 0,
+                                width: 100, // Terminal dimensions will be different, but proportions matter
+                                height: 50,
+                            });
+
+                        if app.show_left_pane && me.column < 30 {
+                            // Click in left pane
+                            app.focus = Focus::Left;
+                        } else if me.column >= (if app.show_left_pane { 30 } else { 0 }) {
+                            // Click in right pane - determine if in editor mode
+                            if app.prefer_raw_editor {
+                                app.focus = Focus::Editor;
+                                app.show_raw_editor = true;
+                            } else {
+                                app.focus = Focus::Preview;
                             }
                         }
                     }

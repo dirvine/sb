@@ -77,6 +77,8 @@ pub struct App {
     pub line_input: TextArea<'static>,
     // Full raw edit mode in the preview pane
     pub show_raw_editor: bool,
+    // Remember user preference for raw editor when switching focus
+    pub prefer_raw_editor: bool,
     // Editor command mode (minimal)
     pub editor_cmd_mode: bool,
     pub editor_cmd_input: TextArea<'static>,
@@ -132,6 +134,7 @@ impl App {
             editing_line: false,
             line_input: TextArea::default(),
             show_raw_editor: false,
+            prefer_raw_editor: false,
             editor_cmd_mode: false,
             editor_cmd_input: TextArea::default(),
             preview_col: 0,
