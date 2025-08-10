@@ -171,7 +171,14 @@ fn run(app: &mut App) -> Result<()> {
                         (KeyCode::Tab, _) => {
                             app.focus = if app.show_left_pane {
                                 match app.focus {
-                                    Focus::Left => Focus::Preview,
+                                    Focus::Left => {
+                                        // Smart navigation: if a file is open, go directly to editor
+                                        if app.opened.is_some() {
+                                            Focus::Editor
+                                        } else {
+                                            Focus::Preview
+                                        }
+                                    }
                                     Focus::Preview => Focus::Editor,
                                     Focus::Editor => Focus::Left,
                                 }

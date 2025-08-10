@@ -389,6 +389,12 @@ fn try_render_code_preview(f: &mut Frame, area: Rect) -> Option<()> {
     let mut lines: Vec<Line> = Vec::new();
     let has_diff = original.is_some();
 
+    // Get cursor position for highlighting
+    let cursor_line = std::env::var("SB_PREVIEW_CURSOR")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(0);
+
     // If we have a diff, show unified inline diff with syntax highlighting
     if let Some(orig) = original {
         let diff = TextDiff::from_lines(&orig, &text);
@@ -407,13 +413,18 @@ fn try_render_code_preview(f: &mut Frame, area: Rect) -> Option<()> {
                     .unwrap_or_default();
                 let mut spans: Vec<Span> = Vec::new();
 
+                // Check if this is the cursor line (only for non-deleted lines)
+                let is_cursor_line = match change.tag() {
+                    ChangeTag::Delete => false, // Deleted lines don't count for cursor position
+                    ChangeTag::Insert | ChangeTag::Equal => line_num - 1 == cursor_line,
+                };
+
                 // Add diff marker and line number
                 match change.tag() {
                     ChangeTag::Delete => {
-                        spans.push(Span::styled(
-                            format!("{line_num:4} - "),
-                            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
-                        ));
+                        let prefix_style =
+                            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD);
+                        spans.push(Span::styled(format!("{line_num:4} - "), prefix_style));
                         // Apply syntax highlighting with red tint
                         for (style, segment) in regions {
                             let fg = style.foreground;
@@ -430,38 +441,57 @@ fn try_render_code_preview(f: &mut Frame, area: Rect) -> Option<()> {
                         }
                     }
                     ChangeTag::Insert => {
-                        spans.push(Span::styled(
-                            format!("{line_num:4} + "),
+                        let prefix_style = if is_cursor_line {
                             Style::default()
                                 .fg(Color::Green)
-                                .add_modifier(Modifier::BOLD),
-                        ));
-                        // Apply syntax highlighting with green tint
+                                .bg(Color::DarkGray)
+                                .add_modifier(Modifier::BOLD)
+                        } else {
+                            Style::default()
+                                .fg(Color::Green)
+                                .add_modifier(Modifier::BOLD)
+                        };
+                        spans.push(Span::styled(format!("{line_num:4} + "), prefix_style));
+                        // Apply syntax highlighting with green tint and cursor highlight
                         for (style, segment) in regions {
                             let fg = style.foreground;
-                            spans.push(Span::styled(
-                                segment.to_string(),
+                            let segment_style = if is_cursor_line {
+                                Style::default()
+                                    .fg(Color::Rgb(
+                                        fg.r.saturating_sub(100),
+                                        fg.g,
+                                        fg.b.saturating_sub(100),
+                                    ))
+                                    .bg(Color::DarkGray)
+                            } else {
                                 Style::default().fg(Color::Rgb(
                                     fg.r.saturating_sub(100),
                                     fg.g,
                                     fg.b.saturating_sub(100),
-                                )),
-                            ));
+                                ))
+                            };
+                            spans.push(Span::styled(segment.to_string(), segment_style));
                         }
                         line_num += 1;
                     }
                     ChangeTag::Equal => {
-                        spans.push(Span::styled(
-                            format!("{line_num:4}   "),
-                            Style::default().fg(Color::DarkGray),
-                        ));
-                        // Normal syntax highlighting
+                        let prefix_style = if is_cursor_line {
+                            Style::default().fg(Color::DarkGray).bg(Color::DarkGray)
+                        } else {
+                            Style::default().fg(Color::DarkGray)
+                        };
+                        spans.push(Span::styled(format!("{line_num:4}   "), prefix_style));
+                        // Normal syntax highlighting with cursor highlight
                         for (style, segment) in regions {
                             let fg = style.foreground;
-                            spans.push(Span::styled(
-                                segment.to_string(),
-                                Style::default().fg(Color::Rgb(fg.r, fg.g, fg.b)),
-                            ));
+                            let segment_style = if is_cursor_line {
+                                Style::default()
+                                    .fg(Color::Rgb(fg.r, fg.g, fg.b))
+                                    .bg(Color::DarkGray)
+                            } else {
+                                Style::default().fg(Color::Rgb(fg.r, fg.g, fg.b))
+                            };
+                            spans.push(Span::styled(segment.to_string(), segment_style));
                         }
                         line_num += 1;
                     }
@@ -497,19 +527,27 @@ fn try_render_code_preview(f: &mut Frame, area: Rect) -> Option<()> {
             let mut h = HighlightLines::new(syntax, theme);
             let mut line_num = 1;
             for raw in text.lines() {
+                let is_cursor_line = (line_num - 1) == cursor_line;
                 let regions = h.highlight_line(raw, &SYNTAX_SET).unwrap_or_default();
                 let mut spans: Vec<Span> = Vec::new();
-                spans.push(Span::styled(
-                    format!("{line_num:4}   "),
-                    Style::default().fg(Color::DarkGray),
-                ));
+
+                let prefix_style = if is_cursor_line {
+                    Style::default().fg(Color::White).bg(Color::DarkGray)
+                } else {
+                    Style::default().fg(Color::DarkGray)
+                };
+                spans.push(Span::styled(format!("{line_num:4}   "), prefix_style));
+
                 for (style, segment) in regions {
                     let fg = style.foreground;
-                    let color = Color::Rgb(fg.r, fg.g, fg.b);
-                    spans.push(Span::styled(
-                        segment.to_string(),
-                        Style::default().fg(color),
-                    ));
+                    let segment_style = if is_cursor_line {
+                        Style::default()
+                            .fg(Color::Rgb(fg.r, fg.g, fg.b))
+                            .bg(Color::DarkGray)
+                    } else {
+                        Style::default().fg(Color::Rgb(fg.r, fg.g, fg.b))
+                    };
+                    spans.push(Span::styled(segment.to_string(), segment_style));
                 }
                 lines.push(Line::from(spans));
                 line_num += 1;
@@ -518,12 +556,21 @@ fn try_render_code_preview(f: &mut Frame, area: Rect) -> Option<()> {
             // Fallback: plain text with line numbers
             let mut line_num = 1;
             for raw in text.lines() {
+                let is_cursor_line = (line_num - 1) == cursor_line;
+                let prefix_style = if is_cursor_line {
+                    Style::default().fg(Color::White).bg(Color::DarkGray)
+                } else {
+                    Style::default().fg(Color::DarkGray)
+                };
+                let text_style = if is_cursor_line {
+                    Style::default().bg(Color::DarkGray)
+                } else {
+                    Style::default()
+                };
+
                 lines.push(Line::from(vec![
-                    Span::styled(
-                        format!("{line_num:4}   "),
-                        Style::default().fg(Color::DarkGray),
-                    ),
-                    Span::from(raw.to_string()),
+                    Span::styled(format!("{line_num:4}   "), prefix_style),
+                    Span::styled(raw.to_string(), text_style),
                 ]));
                 line_num += 1;
             }
@@ -531,10 +578,27 @@ fn try_render_code_preview(f: &mut Frame, area: Rect) -> Option<()> {
     }
 
     // Render as a single unified view
+    let total_lines = text.lines().count();
     let title = if has_diff {
-        format!("Code (Diff vs HEAD) - {path}")
+        format!(
+            "Code (Diff vs HEAD) - {} (Line {}/{})",
+            std::path::Path::new(&path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(&path),
+            cursor_line + 1,
+            total_lines
+        )
     } else {
-        format!("Code - {path}")
+        format!(
+            "Code - {} (Line {}/{})",
+            std::path::Path::new(&path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(&path),
+            cursor_line + 1,
+            total_lines
+        )
     };
 
     let para = Paragraph::new(Text::from(lines))
