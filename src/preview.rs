@@ -1,5 +1,5 @@
 use anyhow::Result;
-use image::io::Reader as ImageReader;
+use image::ImageReader;
 use once_cell::sync::Lazy;
 use pathdiff::diff_paths;
 use ratatui::{prelude::*, widgets::*};
