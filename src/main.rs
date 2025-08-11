@@ -220,12 +220,7 @@ fn run(app: &mut App) -> Result<()> {
                             // Check if this is Ctrl+I (which sends Tab with CONTROL modifier)
                             if mods.contains(KeyModifiers::CONTROL) {
                                 // This is actually Ctrl+I for file picker
-                                eprintln!("DEBUG: Ctrl+I detected, opening file picker");
-                                match app.begin_file_picker() {
-                                    Ok(_) => eprintln!("DEBUG: begin_file_picker succeeded"),
-                                    Err(e) => eprintln!("DEBUG: begin_file_picker failed: {}", e),
-                                }
-                                eprintln!("DEBUG: app.picking_file = {}", app.picking_file);
+                                let _ = app.begin_file_picker();
                             } else if app.show_left_pane {
                                 // Tab between left pane and right pane (in whatever mode it's in)
                                 app.focus = match app.focus {
@@ -271,12 +266,7 @@ fn run(app: &mut App) -> Result<()> {
                         (KeyCode::Char('?'), _) => app.toggle_help(),
                         // Add explicit handler for 'i' with Control modifier as fallback
                         (KeyCode::Char('i'), mods) if mods.contains(KeyModifiers::CONTROL) => {
-                            eprintln!("DEBUG: Ctrl+i (char) detected, opening file picker");
-                            match app.begin_file_picker() {
-                                Ok(_) => eprintln!("DEBUG: begin_file_picker succeeded"),
-                                Err(e) => eprintln!("DEBUG: begin_file_picker failed: {}", e),
-                            }
-                            eprintln!("DEBUG: app.picking_file = {}", app.picking_file);
+                            let _ = app.begin_file_picker();
                         }
                         (KeyCode::Char('n'), _) if matches!(app.focus, Focus::Left) => {
                             app.begin_create_file()
@@ -324,12 +314,7 @@ fn run(app: &mut App) -> Result<()> {
                         // F-keys like MC
                         (KeyCode::F(2), _) => {
                             // F2 as alternative to Ctrl+I for file picker
-                            eprintln!("DEBUG: F2 pressed, opening file picker");
-                            match app.begin_file_picker() {
-                                Ok(_) => eprintln!("DEBUG: begin_file_picker succeeded"),
-                                Err(e) => eprintln!("DEBUG: begin_file_picker failed: {}", e),
-                            }
-                            eprintln!("DEBUG: app.picking_file = {}", app.picking_file);
+                            let _ = app.begin_file_picker();
                         }
                         (KeyCode::F(3), _) => { /* Quick view handled by preview always-on */ }
                         (KeyCode::F(4), _) => {
@@ -743,18 +728,7 @@ fn ui(f: &mut Frame, app: &mut App) {
 
     // --- File picker overlay
     if app.picking_file {
-        eprintln!("DEBUG: Rendering file picker overlay");
-        // Debug: Add a visible indicator that picker is active
-        let debug_area = Rect {
-            x: 0,
-            y: 0,
-            width: 20,
-            height: 1,
-        };
-        f.render_widget(
-            Paragraph::new("PICKER ACTIVE").style(Style::default().fg(Color::Red).bg(Color::White)),
-            debug_area,
-        );
+        // Removed debug output that was being called every frame
         draw_file_picker(f, f.area(), app);
     }
 

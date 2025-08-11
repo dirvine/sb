@@ -476,33 +476,24 @@ impl App {
 
     // --- File picker -------------------------------------------------------
     pub fn begin_file_picker(&mut self) -> Result<()> {
-        eprintln!("DEBUG: begin_file_picker called");
         self.status = "Opening file picker...".to_string();
         self.picking_file = true; // Set this BEFORE loading dir so it stays true even if load fails
-        eprintln!("DEBUG: picking_file set to true");
 
         let start = self
             .opened
             .as_ref()
             .and_then(|p| p.parent().map(|p| p.to_path_buf()))
             .unwrap_or_else(|| self.root.clone());
-        eprintln!("DEBUG: Loading directory: {:?}", start);
 
         match self.load_picker_dir(start) {
             Ok(_) => {
                 self.status = format!("File picker opened with {} items", self.picker_items.len());
-                eprintln!("DEBUG: Loaded {} items", self.picker_items.len());
             }
             Err(e) => {
                 self.status = format!("Failed to load directory: {}", e);
-                eprintln!("DEBUG: Failed to load directory: {}", e);
                 // Keep picking_file = true so user can still see the picker and navigate
             }
         }
-        eprintln!(
-            "DEBUG: end of begin_file_picker, picking_file = {}",
-            self.picking_file
-        );
         Ok(())
     }
 
