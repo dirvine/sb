@@ -8,7 +8,7 @@ repository = "https://github.com/dirvine/sb"
 homepage = "https://github.com/dirvine/sb"
 documentation = "https://github.com/dirvine/sb"
 readme = "README.md"
-keywords = ["markdown", "terminal", "tui", "editor", "browser", "git"]
+keywords = ["markdown", "terminal", "tui", "editor", "git"]
 categories = ["command-line-utilities", "text-editors"]
 license = "MIT OR Apache-2.0"
 
