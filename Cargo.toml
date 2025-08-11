@@ -1,14 +1,14 @@
 [package]
 name = "sb"
-version = "0.2.5"
+version = "0.3.0"
 edition = "2021"
 authors = ["David Irvine <david.irvine@maidsafe.net>"]
-description = "Terminal Markdown Browser/Editor with Vim-like features and media support"
+description = "Terminal Markdown Browser/Editor with Git integration, syntax highlighting, and media support"
 repository = "https://github.com/dirvine/sb"
 homepage = "https://github.com/dirvine/sb"
 documentation = "https://github.com/dirvine/sb"
 readme = "README.md"
-keywords = ["markdown", "terminal", "tui", "editor", "browser"]
+keywords = ["markdown", "terminal", "tui", "editor", "browser", "git"]
 categories = ["command-line-utilities", "text-editors"]
 license = "MIT OR Apache-2.0"
 
