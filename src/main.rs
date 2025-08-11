@@ -19,6 +19,7 @@ use app::*;
 mod preview;
 use preview::*;
 mod fs;
+mod git;
 
 // Ensures terminal is restored even if the app panics or exits abruptly
 struct TermGuard;
@@ -75,6 +76,45 @@ fn run(app: &mut App) -> Result<()> {
                             }
                             (KeyCode::Up, _) | (KeyCode::Char('k'), _) => app.picker_up(),
                             (KeyCode::Down, _) | (KeyCode::Char('j'), _) => app.picker_down(),
+                            // New Git-aware file picker commands
+                            (KeyCode::Char('d'), _) => {
+                                let _ = app.picker_delete_with_git_check();
+                            }
+                            (KeyCode::Char('m'), _) => {
+                                let _ = app.picker_start_move();
+                            }
+                            (KeyCode::Char('p'), _) => {
+                                let _ = app.picker_parent_dir();
+                            }
+                            (KeyCode::Char('s'), _) => {
+                                app.picker_show_git_status();
+                            }
+                            _ => {}
+                        }
+                        continue;
+                    }
+                    // Handle move destination picker
+                    if app.showing_move_dest {
+                        match (k.code, k.modifiers) {
+                            (KeyCode::Esc, _) => app.cancel_move(),
+                            (KeyCode::Enter, _) => {
+                                let _ = app.confirm_move();
+                            }
+                            (KeyCode::Up, _) | (KeyCode::Char('k'), _) => app.move_dest_up(),
+                            (KeyCode::Down, _) | (KeyCode::Char('j'), _) => app.move_dest_down(),
+                            (KeyCode::Right, _) | (KeyCode::Char('l'), _) => {
+                                let _ = app.move_dest_enter();
+                            }
+                            _ => {}
+                        }
+                        continue;
+                    }
+                    // Handle Git status display
+                    if app.showing_git_status {
+                        match (k.code, k.modifiers) {
+                            (KeyCode::Esc, _) | (KeyCode::Enter, _) | (KeyCode::Char('s'), _) => {
+                                app.close_git_status();
+                            }
                             _ => {}
                         }
                         continue;
@@ -153,8 +193,8 @@ fn run(app: &mut App) -> Result<()> {
                     }
                     if app.confirming_delete {
                         match k.code {
-                            KeyCode::Enter => {
-                                let _ = app.confirm_delete();
+                            KeyCode::Enter | KeyCode::Char('d') => {
+                                let _ = app.confirm_delete_with_git();
                             }
                             KeyCode::Esc => app.cancel_delete(),
                             _ => {}
@@ -451,11 +491,28 @@ fn ui(f: &mut Frame, app: &mut App) {
         std::env::set_var("SB_PREVIEW_SCROLL", app.preview_scroll.to_string());
     }
     let preview = if let Some(path) = app.opened.clone() {
-        Preview::from_markdown(&path, &text).unwrap_or_else(|_| Preview {
-            text: Text::raw("(preview error)"),
-            images: vec![],
-            videos: vec![],
-        })
+        // Check if we should show diff instead of regular preview
+        if app.should_show_diff(&path) {
+            if let Some(diff_content) = app.get_file_diff(&path) {
+                Preview {
+                    text: Text::raw(diff_content),
+                    images: vec![],
+                    videos: vec![],
+                }
+            } else {
+                Preview::from_markdown(&path, &text).unwrap_or_else(|_| Preview {
+                    text: Text::raw("(preview error)"),
+                    images: vec![],
+                    videos: vec![],
+                })
+            }
+        } else {
+            Preview::from_markdown(&path, &text).unwrap_or_else(|_| Preview {
+                text: Text::raw("(preview error)"),
+                images: vec![],
+                videos: vec![],
+            })
+        }
     } else {
         Preview {
             text: Text::raw("(no file)"),
@@ -661,6 +718,16 @@ fn ui(f: &mut Frame, app: &mut App) {
     if !matches!(app.op_mode, app::OpMode::None) {
         draw_op_input(f, f.area(), app);
     }
+
+    // --- Move destination picker overlay
+    if app.showing_move_dest {
+        draw_move_destination_picker(f, f.area(), app);
+    }
+
+    // --- Git status display overlay
+    if app.showing_git_status {
+        draw_git_status(f, f.area(), app);
+    }
 }
 
 fn draw_centered_help(f: &mut Frame, area: Rect) {
@@ -796,7 +863,15 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
         width: w,
         height: h,
     };
-    let title = format!("Insert link — {}", app.picker_dir.display());
+
+    // Show Git repository indicator in title if in Git repo
+    let git_indicator = if app.git_repo.is_some() { " [Git]" } else { "" };
+    let title = format!(
+        "Insert link — {}{}",
+        app.picker_dir.display(),
+        git_indicator
+    );
+
     let block = Block::default()
         .title(title)
         .borders(Borders::ALL)
@@ -805,12 +880,21 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(block.clone(), popup);
     let inner = block.inner(popup);
 
+    // Split the inner area to leave space for bottom status bar
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(1)])
+        .split(inner);
+
+    let list_area = chunks[0];
+    let status_area = chunks[1];
+
     let items: Vec<ListItem> = app
         .picker_items
         .iter()
         .enumerate()
         .map(|(i, p)| {
-            let name = if p.is_dir() {
+            let mut name = if p.is_dir() {
                 format!("{}/", p.file_name().unwrap_or_default().to_string_lossy())
             } else {
                 p.file_name()
@@ -818,16 +902,70 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
                     .to_string_lossy()
                     .to_string()
             };
-            let style = if i == app.picker_index {
+
+            // Add Git status indicator if in Git repo
+            if let Some(git_status) = app.get_file_git_status(p) {
+                use git::FileStatus;
+                let indicator = match git_status {
+                    FileStatus::Modified => " [M]",
+                    FileStatus::Added => " [A]",
+                    FileStatus::Deleted => " [D]",
+                    FileStatus::Untracked => " [?]",
+                    FileStatus::Conflicted => " [C]",
+                    FileStatus::Renamed => " [R]",
+                    _ => "",
+                };
+                name.push_str(indicator);
+            }
+
+            let mut style = if i == app.picker_index {
                 Style::default().fg(Color::Cyan)
             } else {
                 Style::default()
             };
+
+            // Color code files based on Git status
+            if let Some(git_status) = app.get_file_git_status(p) {
+                use git::FileStatus;
+                let color = match git_status {
+                    FileStatus::Modified => Color::Yellow,
+                    FileStatus::Added => Color::Green,
+                    FileStatus::Deleted => Color::Red,
+                    FileStatus::Untracked => Color::Blue,
+                    FileStatus::Conflicted => Color::Magenta,
+                    FileStatus::Renamed => Color::Cyan,
+                    _ => {
+                        if i == app.picker_index {
+                            Color::Cyan
+                        } else {
+                            Color::Reset
+                        }
+                    }
+                };
+                if i == app.picker_index {
+                    style = Style::default().fg(color).add_modifier(Modifier::BOLD);
+                } else {
+                    style = Style::default().fg(color);
+                }
+            }
+
             ListItem::new(name).style(style)
         })
         .collect();
+
     let list = List::new(items).highlight_style(Style::default().add_modifier(Modifier::REVERSED));
-    f.render_widget(list, inner);
+    f.render_widget(list, list_area);
+
+    // Draw bottom status bar with commands
+    let status_text = if app.git_repo.is_some() {
+        "D:delete M:move P:parent S:status ESC:cancel"
+    } else {
+        "D:delete M:move P:parent ESC:cancel"
+    };
+
+    let status_bar =
+        Paragraph::new(status_text).style(Style::default().fg(Color::White).bg(Color::Blue));
+    f.render_widget(status_bar, status_area);
 }
 
 fn draw_op_input(f: &mut Frame, area: Rect, app: &App) {
@@ -856,4 +994,137 @@ fn draw_op_input(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(block.clone(), popup);
     let inner = block.inner(popup);
     f.render_widget(&app.op_input, inner);
+}
+
+fn draw_move_destination_picker(f: &mut Frame, area: Rect, app: &App) {
+    let w = area.width.min(60);
+    let h = area.height.min(18);
+    let x = area.x + (area.width.saturating_sub(w)) / 2;
+    let y = area.y + (area.height.saturating_sub(h)) / 2;
+    let popup = Rect {
+        x,
+        y,
+        width: w,
+        height: h,
+    };
+
+    let source_name = app
+        .move_source
+        .as_ref()
+        .and_then(|p| p.file_name())
+        .map(|n| n.to_string_lossy())
+        .unwrap_or_default();
+
+    let title = format!(
+        "Move '{}' to — {}",
+        source_name,
+        app.move_dest_dir.display()
+    );
+    let block = Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Green));
+
+    f.render_widget(Clear, popup);
+    f.render_widget(block.clone(), popup);
+    let inner = block.inner(popup);
+
+    // Split for list and status bar
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(1)])
+        .split(inner);
+
+    let list_area = chunks[0];
+    let status_area = chunks[1];
+
+    let items: Vec<ListItem> = app
+        .move_dest_items
+        .iter()
+        .enumerate()
+        .map(|(i, p)| {
+            let name = if p == &app.move_dest_dir {
+                "..".to_string()
+            } else {
+                format!("{}/", p.file_name().unwrap_or_default().to_string_lossy())
+            };
+
+            let style = if i == app.move_dest_index {
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+
+            ListItem::new(name).style(style)
+        })
+        .collect();
+
+    let list = List::new(items).highlight_style(Style::default().add_modifier(Modifier::REVERSED));
+    f.render_widget(list, list_area);
+
+    // Status bar
+    let status_text = "ENTER:move-here ↑↓:navigate →:enter ESC:cancel";
+    let status_bar =
+        Paragraph::new(status_text).style(Style::default().fg(Color::White).bg(Color::Green));
+    f.render_widget(status_bar, status_area);
+}
+
+fn draw_git_status(f: &mut Frame, area: Rect, app: &App) {
+    let w = area.width.min(80);
+    let h = area.height.min(20);
+    let x = area.x + (area.width.saturating_sub(w)) / 2;
+    let y = area.y + (area.height.saturating_sub(h)) / 2;
+    let popup = Rect {
+        x,
+        y,
+        width: w,
+        height: h,
+    };
+
+    let git_root = app
+        .git_repo
+        .as_ref()
+        .map(|repo| repo.root().display().to_string())
+        .unwrap_or_else(|| "Not a Git repository".to_string());
+
+    let title = format!("Git Status — {}", git_root);
+    let block = Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Magenta));
+
+    f.render_widget(Clear, popup);
+    f.render_widget(block.clone(), popup);
+    let inner = block.inner(popup);
+
+    // Split for content and status bar
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(1)])
+        .split(inner);
+
+    let content_area = chunks[0];
+    let status_area = chunks[1];
+
+    // Git status content
+    let content = if app.git_status_text.is_empty() {
+        "Working tree clean".to_string()
+    } else {
+        app.git_status_text.clone()
+    };
+
+    let status_paragraph = Paragraph::new(content)
+        .style(Style::default().fg(Color::White))
+        .alignment(Alignment::Left)
+        .wrap(ratatui::widgets::Wrap { trim: true });
+
+    f.render_widget(status_paragraph, content_area);
+
+    // Status bar
+    let status_text = "ESC:close ENTER:close S:refresh";
+    let status_bar =
+        Paragraph::new(status_text).style(Style::default().fg(Color::White).bg(Color::Magenta));
+    f.render_widget(status_bar, status_area);
 }

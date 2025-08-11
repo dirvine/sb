@@ -1,7 +1,9 @@
+use super::git::{FileStatus, GitRepository};
 use anyhow::{Context, Result};
 use ratatui::prelude::*;
 use std::io;
 use std::{
+    collections::HashMap,
     fs,
     path::{Path, PathBuf},
 };
@@ -92,6 +94,18 @@ pub struct App {
     // Video playback
     pub video_player: Option<VideoPlayer>,
     pub video_path: Option<PathBuf>,
+    // Git integration
+    pub git_repo: Option<GitRepository>,
+    pub git_status: HashMap<PathBuf, FileStatus>,
+    // Move destination picker
+    pub showing_move_dest: bool,
+    pub move_dest_dir: PathBuf,
+    pub move_dest_items: Vec<PathBuf>,
+    pub move_dest_index: usize,
+    pub move_source: Option<PathBuf>,
+    // Git status display
+    pub showing_git_status: bool,
+    pub git_status_text: String,
 }
 
 impl App {
@@ -106,6 +120,13 @@ impl App {
         editor.set_placeholder_text("Select a file in the tree (Enter) …");
         let mut filename_input = TextArea::default();
         filename_input.set_placeholder_text("new-note.md");
+        let git_repo = GitRepository::open(&root).ok();
+        let git_status: HashMap<PathBuf, FileStatus> = if let Some(ref repo) = git_repo {
+            repo.status().unwrap_or_default()
+        } else {
+            HashMap::new()
+        };
+
         Ok(Self {
             root: root.clone(),
             focus: Focus::Left,
@@ -145,6 +166,15 @@ impl App {
             autoplay_video: false,
             video_player: None,
             video_path: None,
+            git_repo,
+            git_status,
+            showing_move_dest: false,
+            move_dest_dir: root.clone(),
+            move_dest_items: vec![],
+            move_dest_index: 0,
+            move_source: None,
+            showing_git_status: false,
+            git_status_text: String::new(),
         })
     }
 
@@ -545,6 +575,264 @@ impl App {
         self.editor.insert_str(&link);
         self.status = format!("Inserted link to {}", rel.display());
         Ok(())
+    }
+
+    // --- Git-aware file picker enhancements -----------------------------------
+
+    /// Navigate to parent directory in file picker (P command)
+    pub fn picker_parent_dir(&mut self) -> Result<()> {
+        if let Some(parent) = self.picker_dir.parent() {
+            self.load_picker_dir(parent.to_path_buf())?;
+        }
+        Ok(())
+    }
+
+    /// Start move operation (M command)
+    pub fn picker_start_move(&mut self) -> Result<()> {
+        if let Some(path) = self.picker_items.get(self.picker_index).cloned() {
+            if path.is_file() {
+                self.move_source = Some(path);
+                self.showing_move_dest = true;
+                self.move_dest_dir = self.picker_dir.clone();
+                self.load_move_dest_dir(self.move_dest_dir.clone())?;
+                self.status = "Select move destination".to_string();
+            }
+        }
+        Ok(())
+    }
+
+    /// Show Git status (S command)
+    pub fn picker_show_git_status(&mut self) {
+        if let Some(ref repo) = self.git_repo {
+            match repo.status_summary() {
+                Ok(summary) => {
+                    self.git_status_text = summary;
+                    self.showing_git_status = true;
+                    self.status = "Showing Git status".to_string();
+                }
+                Err(_) => {
+                    self.status = "Failed to get Git status".to_string();
+                }
+            }
+        } else {
+            self.status = "Not a Git repository".to_string();
+        }
+    }
+
+    /// Delete with Git awareness (D command)
+    pub fn picker_delete_with_git_check(&mut self) -> Result<()> {
+        if let Some(path) = self.picker_items.get(self.picker_index).cloned() {
+            if path.is_file() {
+                if self.is_in_git_repo(&path) {
+                    self.status =
+                        "Delete will use 'git rm'. Press 'd' again to confirm.".to_string();
+                    self.delete_target = Some(path);
+                    self.confirming_delete = true;
+                } else {
+                    self.delete_target = Some(path);
+                    self.confirming_delete = true;
+                    self.status = "Press 'd' again to confirm deletion".to_string();
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Confirm deletion with Git support
+    pub fn confirm_delete_with_git(&mut self) -> Result<()> {
+        if let Some(path) = self.delete_target.take() {
+            if self.is_in_git_repo(&path) {
+                if let Some(ref repo) = self.git_repo {
+                    match repo.remove_file(&path) {
+                        Ok(()) => {
+                            self.status = format!(
+                                "Git removed: {}",
+                                path.file_name().unwrap_or_default().to_string_lossy()
+                            );
+                        }
+                        Err(_) => {
+                            // Fallback to regular file deletion
+                            if path.exists() {
+                                std::fs::remove_file(&path)?;
+                                self.status = format!(
+                                    "Deleted: {}",
+                                    path.file_name().unwrap_or_default().to_string_lossy()
+                                );
+                            }
+                        }
+                    }
+                }
+            } else if path.exists() {
+                std::fs::remove_file(&path)?;
+                self.status = format!(
+                    "Deleted: {}",
+                    path.file_name().unwrap_or_default().to_string_lossy()
+                );
+            }
+
+            // Refresh the picker
+            self.load_picker_dir(self.picker_dir.clone())?;
+            self.refresh_git_status();
+        }
+        self.confirming_delete = false;
+        Ok(())
+    }
+
+    /// Check if a path is within the Git repository
+    fn is_in_git_repo(&self, path: &Path) -> bool {
+        if let Some(ref repo) = self.git_repo {
+            path.starts_with(repo.root())
+        } else {
+            false
+        }
+    }
+
+    /// Load directory for move destination picker
+    fn load_move_dest_dir(&mut self, dir: PathBuf) -> Result<()> {
+        let mut items: Vec<PathBuf> = std::fs::read_dir(&dir)?
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| p.is_dir()) // Only show directories for move destination
+            .filter(|p| {
+                !p.file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .starts_with('.')
+            })
+            .collect();
+
+        items.sort_by_key(|p| {
+            p.file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_lowercase()
+        });
+
+        // Add parent entry if not at root
+        if let Some(parent) = dir.parent() {
+            if parent != dir {
+                items.insert(0, parent.to_path_buf());
+            }
+        }
+
+        self.move_dest_dir = dir;
+        self.move_dest_items = items;
+        self.move_dest_index = 0;
+        Ok(())
+    }
+
+    /// Navigate in move destination picker
+    pub fn move_dest_up(&mut self) {
+        if self.move_dest_index > 0 {
+            self.move_dest_index -= 1;
+        }
+    }
+
+    pub fn move_dest_down(&mut self) {
+        if self.move_dest_index + 1 < self.move_dest_items.len() {
+            self.move_dest_index += 1;
+        }
+    }
+
+    /// Navigate to directory in move destination picker
+    pub fn move_dest_enter(&mut self) -> Result<()> {
+        if let Some(path) = self.move_dest_items.get(self.move_dest_index).cloned() {
+            self.load_move_dest_dir(path)?;
+        }
+        Ok(())
+    }
+
+    /// Confirm move operation
+    pub fn confirm_move(&mut self) -> Result<()> {
+        if let Some(source) = self.move_source.take() {
+            let dest_dir = &self.move_dest_dir;
+            let filename = source.file_name().unwrap_or_default();
+            let dest = dest_dir.join(filename);
+
+            if self.is_in_git_repo(&source) && self.is_in_git_repo(&dest) {
+                // Both source and dest are in the Git repo, use git mv
+                if let Some(ref repo) = self.git_repo {
+                    match repo.move_file(&source, &dest) {
+                        Ok(()) => {
+                            self.status = format!(
+                                "Git moved: {} -> {}",
+                                source.file_name().unwrap_or_default().to_string_lossy(),
+                                dest.display()
+                            );
+                        }
+                        Err(_) => {
+                            // Fallback to regular move
+                            std::fs::rename(&source, &dest)?;
+                            self.status = format!(
+                                "Moved: {} -> {}",
+                                source.file_name().unwrap_or_default().to_string_lossy(),
+                                dest.display()
+                            );
+                        }
+                    }
+                }
+            } else {
+                // Regular move
+                std::fs::rename(&source, &dest)?;
+                self.status = format!(
+                    "Moved: {} -> {}",
+                    source.file_name().unwrap_or_default().to_string_lossy(),
+                    dest.display()
+                );
+            }
+
+            // Refresh views
+            self.load_picker_dir(self.picker_dir.clone())?;
+            self.refresh_git_status();
+        }
+
+        self.showing_move_dest = false;
+        Ok(())
+    }
+
+    /// Cancel move operation
+    pub fn cancel_move(&mut self) {
+        self.showing_move_dest = false;
+        self.move_source = None;
+        self.status = "Move cancelled".to_string();
+    }
+
+    /// Close Git status display
+    pub fn close_git_status(&mut self) {
+        self.showing_git_status = false;
+        self.status = "Ready".to_string();
+    }
+
+    /// Refresh Git status cache
+    pub fn refresh_git_status(&mut self) {
+        if let Some(ref repo) = self.git_repo {
+            if let Ok(status) = repo.status() {
+                self.git_status = status;
+            }
+        }
+    }
+
+    /// Get the Git status of a file
+    pub fn get_file_git_status(&self, path: &Path) -> Option<FileStatus> {
+        self.git_status.get(path).copied()
+    }
+
+    /// Check if file preview should show diff
+    pub fn should_show_diff(&self, path: &Path) -> bool {
+        if let Some(status) = self.get_file_git_status(path) {
+            matches!(status, FileStatus::Modified | FileStatus::Added)
+        } else {
+            false
+        }
+    }
+
+    /// Get diff content for a file
+    pub fn get_file_diff(&self, path: &Path) -> Option<String> {
+        if let Some(ref repo) = self.git_repo {
+            repo.file_diff(path).ok()
+        } else {
+            None
+        }
     }
 
     pub fn current_selection_path(&self) -> Option<PathBuf> {
