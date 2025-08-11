@@ -579,6 +579,19 @@ fn ui(f: &mut Frame, app: &mut App) {
         f.render_widget(p, area);
     }
 
+    // "Q to quit" indicator in top-left corner
+    let quit_hint = " Q: Quit ";
+    let quit_area = Rect {
+        x: 0,
+        y: 0,
+        width: quit_hint.len() as u16,
+        height: 1,
+    };
+    f.render_widget(Clear, quit_area);
+    let quit_widget =
+        Paragraph::new(quit_hint).style(Style::default().fg(Color::Black).bg(Color::Yellow));
+    f.render_widget(quit_widget, quit_area);
+
     // Footer hint in Preview to restore Files pane (one row above global status bar)
     if matches!(app.focus, Focus::Preview)
         && !app.show_raw_editor
@@ -607,7 +620,7 @@ fn ui(f: &mut Frame, app: &mut App) {
     let mut status_lines = vec![app.status.clone()];
     let files_state = if app.show_left_pane { "On" } else { "Off" };
     status_lines.push(format!("Files pane: {files_state} (Ctrl+B/F9 toggle)"));
-    status_lines.push("Keys: Tab/Shift+Tab focus | Enter open | F5 Copy | F6 Move | F7 Mkdir | F8 Delete | F4 Edit | Ctrl+I link | Ctrl+S save | Space pause video | s stop video | e edit raw | Esc: exit raw/quit | ? help | F10/Q quit".into());
+    status_lines.push("Keys: Tab/Shift+Tab focus | Enter open | D Delete file | F5 Copy | F6 Move | F7 Mkdir | F4 Edit | Ctrl+I link | Ctrl+S save | e edit raw | ? help".into());
     let status = Paragraph::new(status_lines.join("  ·  "))
         .style(Style::default().fg(Color::Yellow))
         .block(
@@ -704,8 +717,12 @@ fn draw_new_file_prompt(f: &mut Frame, area: Rect, input: &TextArea) {
 }
 
 fn draw_delete_confirm(f: &mut Frame, area: Rect, target: Option<&std::path::Path>) {
+    // Create a semi-transparent background overlay
+    let overlay_block = Block::default().style(Style::default().bg(Color::Black));
+    f.render_widget(overlay_block, area);
+
     let w = area.width.min(60);
-    let h = 5;
+    let h = 8;
     let x = area.x + (area.width.saturating_sub(w)) / 2;
     let y = area.y + (area.height.saturating_sub(h)) / 2;
     let popup = Rect {
@@ -714,18 +731,57 @@ fn draw_delete_confirm(f: &mut Frame, area: Rect, target: Option<&std::path::Pat
         width: w,
         height: h,
     };
-    let title = match target {
-        Some(p) => format!(
-            "Delete {}?",
-            p.file_name().unwrap_or_default().to_string_lossy()
-        ),
-        None => "Delete selected?".into(),
-    };
-    let block = Block::default().title(title).borders(Borders::ALL);
+
+    // Azure-style blue border with white background
+    let block = Block::default()
+        .title(" ⚠️  Confirm Delete ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan))
+        .border_type(BorderType::Rounded)
+        .style(Style::default().bg(Color::Black));
+
     f.render_widget(Clear, popup);
     f.render_widget(block.clone(), popup);
+
     let inner = block.inner(popup);
-    let body = Paragraph::new("Enter = confirm   Esc = cancel");
+
+    // Create content with better spacing
+    let file_name = match target {
+        Some(p) => p
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string(),
+        None => "selected file".to_string(),
+    };
+
+    let content = vec![
+        Line::from(""),
+        Line::from(vec![
+            Span::raw("Are you sure you want to delete "),
+            Span::styled(
+                format!("'{file_name}'"),
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw("?"),
+        ]),
+        Line::from(""),
+        Line::from("This action cannot be undone.").style(Style::default().fg(Color::Red)),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(
+                " Enter ",
+                Style::default().fg(Color::Black).bg(Color::Green),
+            ),
+            Span::raw(" Confirm  "),
+            Span::styled(" Esc ", Style::default().fg(Color::Black).bg(Color::Red)),
+            Span::raw(" Cancel"),
+        ]),
+    ];
+
+    let body = Paragraph::new(content).alignment(Alignment::Center);
     f.render_widget(body, inner);
 }
 
