@@ -221,7 +221,10 @@ fn run(app: &mut App) -> Result<()> {
                             if mods.contains(KeyModifiers::CONTROL) {
                                 // This is actually Ctrl+I for file picker
                                 eprintln!("DEBUG: Ctrl+I detected, opening file picker");
-                                let _ = app.begin_file_picker();
+                                match app.begin_file_picker() {
+                                    Ok(_) => eprintln!("DEBUG: begin_file_picker succeeded"),
+                                    Err(e) => eprintln!("DEBUG: begin_file_picker failed: {}", e),
+                                }
                                 eprintln!("DEBUG: app.picking_file = {}", app.picking_file);
                             } else if app.show_left_pane {
                                 // Tab between left pane and right pane (in whatever mode it's in)
@@ -269,7 +272,10 @@ fn run(app: &mut App) -> Result<()> {
                         // Add explicit handler for 'i' with Control modifier as fallback
                         (KeyCode::Char('i'), mods) if mods.contains(KeyModifiers::CONTROL) => {
                             eprintln!("DEBUG: Ctrl+i (char) detected, opening file picker");
-                            let _ = app.begin_file_picker();
+                            match app.begin_file_picker() {
+                                Ok(_) => eprintln!("DEBUG: begin_file_picker succeeded"),
+                                Err(e) => eprintln!("DEBUG: begin_file_picker failed: {}", e),
+                            }
                             eprintln!("DEBUG: app.picking_file = {}", app.picking_file);
                         }
                         (KeyCode::Char('n'), _) if matches!(app.focus, Focus::Left) => {
@@ -319,7 +325,10 @@ fn run(app: &mut App) -> Result<()> {
                         (KeyCode::F(2), _) => {
                             // F2 as alternative to Ctrl+I for file picker
                             eprintln!("DEBUG: F2 pressed, opening file picker");
-                            let _ = app.begin_file_picker();
+                            match app.begin_file_picker() {
+                                Ok(_) => eprintln!("DEBUG: begin_file_picker succeeded"),
+                                Err(e) => eprintln!("DEBUG: begin_file_picker failed: {}", e),
+                            }
                             eprintln!("DEBUG: app.picking_file = {}", app.picking_file);
                         }
                         (KeyCode::F(3), _) => { /* Quick view handled by preview always-on */ }
