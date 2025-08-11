@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::io::{self};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crossterm::{
@@ -88,6 +88,14 @@ fn run(app: &mut App) -> Result<()> {
                             }
                             (KeyCode::Char('s') | KeyCode::Char('S'), _) => {
                                 app.picker_show_git_status();
+                            }
+                            (KeyCode::Char('o') | KeyCode::Char('O'), _) => {
+                                // Open selected file in external editor
+                                if app.picker_index < app.picker_items.len() {
+                                    let path = &app.picker_items[app.picker_index];
+                                    let _ = opener::open(path);
+                                    app.status = format!("Opened {} externally", path.display());
+                                }
                             }
                             (KeyCode::Char(c), _) => {
                                 // Debug: show what key was pressed
@@ -372,10 +380,37 @@ fn run(app: &mut App) -> Result<()> {
                                     let _ = app.left_state.key_down();
                                 }
                                 KeyCode::Left => {
+                                    // Try to collapse tree node
                                     let _ = app.left_state.key_left();
                                 }
                                 KeyCode::Right => {
-                                    let _ = app.left_state.key_right();
+                                    // Check if current selection is a file (can't be expanded)
+                                    let is_file = app
+                                        .left_state
+                                        .selected()
+                                        .first()
+                                        .and_then(|s| Path::new(s).to_str())
+                                        .map(|s| Path::new(s).is_file())
+                                        .unwrap_or(false);
+
+                                    if is_file {
+                                        // If it's a file, switch to preview/editor pane
+                                        app.focus = if app.prefer_raw_editor && app.opened.is_some()
+                                        {
+                                            Focus::Editor
+                                        } else {
+                                            Focus::Preview
+                                        };
+                                        // Restore raw editor mode if needed
+                                        if matches!(app.focus, Focus::Editor)
+                                            && app.prefer_raw_editor
+                                        {
+                                            app.show_raw_editor = true;
+                                        }
+                                    } else {
+                                        // If it's a directory, try to expand it
+                                        let _ = app.left_state.key_right();
+                                    }
                                 }
                                 _ => {}
                             },
@@ -387,8 +422,18 @@ fn run(app: &mut App) -> Result<()> {
                             Focus::Preview => match k.code {
                                 KeyCode::Up | KeyCode::Char('k') => app.move_cursor_up(),
                                 KeyCode::Down | KeyCode::Char('j') => app.move_cursor_down(),
-                                KeyCode::Left => app.move_col_left(),
-                                KeyCode::Right => app.move_col_right(),
+                                KeyCode::Left => {
+                                    // In preview mode, left arrow switches to left pane if visible
+                                    if app.show_left_pane {
+                                        app.focus = Focus::Left;
+                                    } else {
+                                        app.move_col_left();
+                                    }
+                                }
+                                KeyCode::Right => {
+                                    // In preview mode, right arrow just scrolls horizontally
+                                    app.move_col_right();
+                                }
                                 _ => {}
                             },
                         },
@@ -716,14 +761,21 @@ fn ui(f: &mut Frame, app: &mut App) {
         }
         // Preview mode with focus
         (Focus::Preview, false, false) => {
-            format!(
-                "PREVIEW MODE  │  ↑↓ scroll  e edit  Ctrl+S save  F2 picker  ? help  │  {}",
-                app.status
-            )
+            if app.show_left_pane {
+                format!(
+                    "PREVIEW MODE  │  ↑↓ scroll  ← files  e edit  Ctrl+S save  F2 picker  ? help  │  {}",
+                    app.status
+                )
+            } else {
+                format!(
+                    "PREVIEW MODE  │  ↑↓ scroll  e edit  Ctrl+S save  F2 picker  ? help  │  {}",
+                    app.status
+                )
+            }
         }
         // File tree focus
         (Focus::Left, _, false) => {
-            format!("FILES  │  ↑↓ navigate  Enter open  D delete  N new  F5 copy  F6 move  F7 mkdir  │  {}", app.status)
+            format!("FILES  │  ↑↓ navigate  → preview  Enter open  D delete  N new  F5 copy  F6 move  F7 mkdir  │  {}", app.status)
         }
         // Default
         _ => {
@@ -996,7 +1048,8 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(list, chunks[0]);
 
     // Draw status bar at bottom with commands
-    let status_text = "↑↓:navigate  Enter:select  D:delete  P:parent  S:git-status  ESC:cancel";
+    let status_text =
+        "↑↓:navigate  Enter:select  O:open-external  D:delete  P:parent  S:git-status  ESC:cancel";
     let status = Paragraph::new(status_text)
         .style(
             Style::default()
