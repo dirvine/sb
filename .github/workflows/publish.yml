@@ -1,0 +1,152 @@
+name: Publish to crates.io
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (do not actually publish)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  validate:
+    name: Validate Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      
+      - name: Check package metadata
+        run: |
+          cargo metadata --format-version 1 --no-deps
+      
+      - name: Verify package
+        run: cargo package --no-verify --list
+      
+      - name: Build documentation
+        run: cargo doc --no-deps --all-features
+      
+      - name: Run tests
+        run: cargo test --all-features
+
+  publish:
+    name: Publish to crates.io
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' || github.event.inputs.dry_run == 'false'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      
+      - name: Login to crates.io
+        run: cargo login ${{ secrets.CRATES_IO_TOKEN }}
+      
+      - name: Publish to crates.io
+        run: |
+          # Get current version from Cargo.toml
+          VERSION=$(grep "^version" Cargo.toml | head -1 | cut -d '"' -f 2)
+          echo "Publishing version $VERSION to crates.io"
+          
+          # Check if this version already exists on crates.io
+          if cargo search sb --limit 1 | grep -q "^sb = \"$VERSION\""; then
+            echo "Version $VERSION already published on crates.io"
+            exit 0
+          fi
+          
+          # Publish the crate
+          cargo publish --all-features
+      
+      - name: Verify publication
+        run: |
+          # Wait a bit for crates.io to update
+          sleep 30
+          
+          # Verify the package is available
+          VERSION=$(grep "^version" Cargo.toml | head -1 | cut -d '"' -f 2)
+          cargo search sb --limit 5 | grep -q "^sb = \"$VERSION\"" || echo "Warning: Version not immediately visible on crates.io"
+
+  dry-run:
+    name: Dry Run
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event.inputs.dry_run == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Dry run publish
+        run: |
+          VERSION=$(grep "^version" Cargo.toml | head -1 | cut -d '"' -f 2)
+          echo "Would publish version $VERSION to crates.io"
+          
+          # Package but don't publish
+          cargo package --list
+          cargo package --no-verify
+          
+          echo "Dry run complete - no actual publication"
+
+  update-docs:
+    name: Update Documentation
+    needs: publish
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Build documentation
+        run: |
+          cargo doc --no-deps --all-features
+          echo '<meta http-equiv="refresh" content="0; url=sb/index.html">' > target/doc/index.html
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/doc
+          cname: docs.example.com  # Replace with your custom domain if you have one
+
+  notify:
+    name: Send Notifications
+    needs: [publish, update-docs]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - name: Get release info
+        id: release
+        run: |
+          VERSION=$(echo "${{ github.ref }}" | sed 's/refs\/tags\/v//')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Send notification
+        run: |
+          echo "Successfully published sb v${{ steps.release.outputs.version }} to crates.io"
+          echo "Documentation updated at GitHub Pages"
+          echo "Release page: ${{ github.event.release.html_url }}"

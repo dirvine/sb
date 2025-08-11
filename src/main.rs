@@ -671,10 +671,10 @@ fn draw_centered_help(f: &mut Frame, area: Rect) {
         "Tree: ↑↓←→ or j/k, Enter toggles/open",
         "Editor: type freely (Enter = newline)",
         "New file: N",
-        "Delete: D (confirm)",
+        "Delete: d (confirm)",
         "Insert link (picker): Ctrl+I",
         "Save: Ctrl+S",
-        "Open externally: O",
+        "Open externally: o",
         "Help: ? (toggle)",
         "Quit: Q / Esc",
     ]

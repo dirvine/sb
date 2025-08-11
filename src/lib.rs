@@ -10,6 +10,10 @@ pub mod preview;
 pub mod config;
 pub mod security;
 
+// Test modules
+#[cfg(test)]
+pub mod tests;
+
 // Re-export commonly used types
 pub use app::App;
 pub use config::Config;
