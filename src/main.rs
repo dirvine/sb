@@ -720,6 +720,17 @@ fn ui(f: &mut Frame, app: &mut App) {
 
     // --- File picker overlay
     if app.picking_file {
+        // Debug: Add a visible indicator that picker is active
+        let debug_area = Rect {
+            x: 0,
+            y: 0,
+            width: 20,
+            height: 1,
+        };
+        f.render_widget(
+            Paragraph::new("PICKER ACTIVE").style(Style::default().fg(Color::Red).bg(Color::White)),
+            debug_area,
+        );
         draw_file_picker(f, f.area(), app);
     }
 
@@ -862,8 +873,9 @@ fn draw_delete_confirm(f: &mut Frame, area: Rect, target: Option<&std::path::Pat
 }
 
 fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
-    let w = area.width.min(70);
-    let h = area.height.min(30);
+    // SIMPLIFY: Just draw a bright red box in the center to see if it shows
+    let w = 60;
+    let h = 20;
     let x = area.x + (area.width.saturating_sub(w)) / 2;
     let y = area.y + (area.height.saturating_sub(h)) / 2;
     let popup = Rect {
@@ -876,124 +888,31 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
     // Clear the entire popup area first
     f.render_widget(Clear, popup);
 
-    // Show Git repository indicator in title if in Git repo
-    let git_indicator = if app.git_repo.is_some() { " [Git]" } else { "" };
-    let title = format!(
-        "Insert link — {}{}",
-        app.picker_dir.display(),
-        git_indicator
-    );
-
+    // Draw a simple bright red block to make it obvious
     let block = Block::default()
-        .title(title)
+        .title("FILE PICKER - PRESS ESC TO CLOSE")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Magenta));
+        .border_style(Style::default().fg(Color::Red).bg(Color::Yellow))
+        .style(Style::default().bg(Color::Black));
     f.render_widget(block.clone(), popup);
     let inner = block.inner(popup);
 
-    // Manually calculate areas to ensure status bar is visible
-    // Reserve bottom 2 lines for status bar
-    let status_height = 2;
-    let list_area = Rect {
+    // SIMPLE TEST: Just show a yellow bar at the bottom of the popup
+    let text = Paragraph::new("If you see this RED TEXT, the picker is rendering!\nPress ESC to close\nPress any key to test")
+        .style(Style::default().fg(Color::Red).bg(Color::White))
+        .alignment(ratatui::layout::Alignment::Center);
+
+    f.render_widget(text, inner);
+
+    // Draw a yellow status bar at the very bottom of the popup
+    let status_bar = Rect {
         x: inner.x,
-        y: inner.y,
+        y: inner.y + inner.height - 1,
         width: inner.width,
-        height: if inner.height > status_height {
-            inner.height - status_height
-        } else {
-            inner.height.saturating_sub(1)
-        },
+        height: 1,
     };
 
-    let status_area = Rect {
-        x: inner.x,
-        y: inner.y + list_area.height, // Start right after the list
-        width: inner.width,
-        height: status_height.min(inner.height.saturating_sub(list_area.height)),
-    };
-
-    let items: Vec<ListItem> = app
-        .picker_items
-        .iter()
-        .enumerate()
-        .map(|(i, p)| {
-            let mut name = if p.is_dir() {
-                format!("{}/", p.file_name().unwrap_or_default().to_string_lossy())
-            } else {
-                p.file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .to_string()
-            };
-
-            // Add Git status indicator if in Git repo
-            if let Some(git_status) = app.get_file_git_status(p) {
-                use git::FileStatus;
-                let indicator = match git_status {
-                    FileStatus::Modified => " [M]",
-                    FileStatus::Added => " [A]",
-                    FileStatus::Deleted => " [D]",
-                    FileStatus::Untracked => " [?]",
-                    FileStatus::Conflicted => " [C]",
-                    FileStatus::Renamed => " [R]",
-                    _ => "",
-                };
-                name.push_str(indicator);
-            }
-
-            let mut style = if i == app.picker_index {
-                Style::default().fg(Color::Cyan)
-            } else {
-                Style::default()
-            };
-
-            // Color code files based on Git status
-            if let Some(git_status) = app.get_file_git_status(p) {
-                use git::FileStatus;
-                let color = match git_status {
-                    FileStatus::Modified => Color::Yellow,
-                    FileStatus::Added => Color::Green,
-                    FileStatus::Deleted => Color::Red,
-                    FileStatus::Untracked => Color::Blue,
-                    FileStatus::Conflicted => Color::Magenta,
-                    FileStatus::Renamed => Color::Cyan,
-                    _ => {
-                        if i == app.picker_index {
-                            Color::Cyan
-                        } else {
-                            Color::Reset
-                        }
-                    }
-                };
-                if i == app.picker_index {
-                    style = Style::default().fg(color).add_modifier(Modifier::BOLD);
-                } else {
-                    style = Style::default().fg(color);
-                }
-            }
-
-            ListItem::new(name).style(style)
-        })
-        .collect();
-
-    let list = List::new(items).highlight_style(Style::default().add_modifier(Modifier::REVERSED));
-    f.render_widget(list, list_area);
-
-    // Draw bottom status bar with commands
-    // First fill the entire status area with a visible background
-    f.render_widget(
-        Block::default().style(Style::default().bg(Color::Yellow)),
-        status_area,
-    );
-
-    let status_text = if app.git_repo.is_some() {
-        " D:delete  M:move  P:parent  S:status  ESC:cancel  [GIT] "
-    } else {
-        " D:delete  M:move  P:parent  ESC:cancel  [NO-GIT] "
-    };
-
-    // Now draw the text on top
-    let status_paragraph = Paragraph::new(status_text)
+    let status = Paragraph::new("D:delete M:move P:parent S:status ESC:cancel")
         .style(
             Style::default()
                 .fg(Color::Black)
@@ -1002,7 +921,7 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
         )
         .alignment(ratatui::layout::Alignment::Center);
 
-    f.render_widget(status_paragraph, status_area);
+    f.render_widget(status, status_bar);
 }
 
 fn draw_op_input(f: &mut Frame, area: Rect, app: &App) {

@@ -476,6 +476,7 @@ impl App {
 
     // --- File picker -------------------------------------------------------
     pub fn begin_file_picker(&mut self) -> Result<()> {
+        self.status = "Opening file picker...".to_string();
         let start = self
             .opened
             .as_ref()
@@ -483,6 +484,7 @@ impl App {
             .unwrap_or_else(|| self.root.clone());
         self.load_picker_dir(start)?;
         self.picking_file = true;
+        self.status = format!("File picker opened with {} items", self.picker_items.len());
         Ok(())
     }
 
