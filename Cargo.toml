@@ -47,7 +47,7 @@ notify = "6"
 pathdiff = "0.2"
 
 # Open files/URLs in the OS default app (images/video/etc.)
-opener = "0.6"
+opener = "0.8"
 
 # Optional image rendering (enabled via `--features graphics`)
 ratatui-image = { version = "8", default-features = false, features = ["crossterm"] }
