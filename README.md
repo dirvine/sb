@@ -23,6 +23,7 @@
 - **Inline Editing**: Per-line editing in preview mode or full editor pane
 - **Command Mode**: Basic commands `:w` (save), `:q` (quit), `:wq` (save and quit)
 - **File Operations**: Midnight-Commander-style Copy/Move/Mkdir/Delete with modern confirmation dialogs
+- **Context-Aware Status Bar**: Dynamic command hints that change based on current mode and focus
 
 ### Security & Performance Features
 - **🔒 Security Hardening**: Complete path traversal protection and input validation
@@ -162,7 +163,11 @@ Git status indicators on files:
 - **Q: Quit**: Prominent yellow badge in top-left corner for easy exit
 - **Focus Indicators**: Cyan border for active pane, blue for inactive
 - **File Status**: Git changes shown with visual diff indicators
-- **Status Bar**: Shows current mode, available commands, and file status
+- **Context-Sensitive Status Bar**: Persistent cyan bar at bottom showing:
+  - Dynamic commands based on current mode (Preview/Editor/Files)
+  - Real-time updates when switching focus or modes
+  - Current application status and messages
+  - Clear, bold text on cyan background for excellent visibility
 
 ### Modern Dialogs
 - **Delete Confirmation**: Azure-style modal with:

@@ -467,6 +467,16 @@ fn run(app: &mut App) -> Result<()> {
 }
 
 fn ui(f: &mut Frame, app: &mut App) {
+    // First split vertically to reserve space for status bar
+    let main_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(3),    // Main content area
+            Constraint::Length(1), // Status bar
+        ])
+        .split(f.area());
+
+    // Then split the main area horizontally for file tree and content
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(if app.show_left_pane {
@@ -474,7 +484,7 @@ fn ui(f: &mut Frame, app: &mut App) {
         } else {
             [Constraint::Length(0), Constraint::Min(40)]
         })
-        .split(f.area());
+        .split(main_chunks[0]);
 
     // --- Left pane
     if app.show_left_pane {
@@ -690,26 +700,53 @@ fn ui(f: &mut Frame, app: &mut App) {
         f.render_widget(p, area);
     }
 
-    // --- Status bar
-    let mut status_lines = vec![app.status.clone()];
-    let files_state = if app.show_left_pane { "On" } else { "Off" };
-    status_lines.push(format!("Files pane: {files_state} (Ctrl+B/F9 toggle)"));
-    status_lines.push("Keys: Tab/Shift+Tab focus | Enter open | D Delete file | F2 File picker | F5 Copy | F6 Move | F7 Mkdir | F4 Edit | Ctrl+S save | e edit raw | ? help".into());
-    let status = Paragraph::new(status_lines.join("  ·  "))
-        .style(Style::default().fg(Color::Yellow))
-        .block(
-            Block::default()
-                .borders(Borders::TOP)
-                .border_style(Style::default().fg(Color::Yellow)),
-        );
-    let full = f.area();
-    let sb_area = Rect {
-        x: full.x,
-        y: full.bottom().saturating_sub(1),
-        width: full.width,
-        height: 1,
+    // --- Status bar (context-sensitive)
+    let status_text = match (&app.focus, app.show_raw_editor, app.picking_file) {
+        // File picker mode
+        (_, _, true) => {
+            // File picker has its own status bar, skip main status
+            "".to_string()
+        }
+        // Editor mode
+        (Focus::Editor, true, false) | (_, true, false) if app.prefer_raw_editor => {
+            format!(
+                "EDITOR MODE  │  Ctrl+S save  │  ESC return to preview  │  {}",
+                app.status
+            )
+        }
+        // Preview mode with focus
+        (Focus::Preview, false, false) => {
+            format!(
+                "PREVIEW MODE  │  ↑↓ scroll  e edit  Ctrl+S save  F2 picker  ? help  │  {}",
+                app.status
+            )
+        }
+        // File tree focus
+        (Focus::Left, _, false) => {
+            format!("FILES  │  ↑↓ navigate  Enter open  D delete  N new  F5 copy  F6 move  F7 mkdir  │  {}", app.status)
+        }
+        // Default
+        _ => {
+            format!(
+                "Tab focus  │  Ctrl+B toggle files  │  F2 file picker  │  ? help  │  {}",
+                app.status
+            )
+        }
     };
-    f.render_widget(status, sb_area);
+
+    if !status_text.is_empty() {
+        let status = Paragraph::new(status_text)
+            .style(
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )
+            .alignment(ratatui::layout::Alignment::Center);
+
+        // Use the reserved status bar area from main_chunks[1]
+        f.render_widget(status, main_chunks[1]);
+    }
 
     // --- Help overlay
     if app.show_help {
