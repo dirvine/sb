@@ -220,7 +220,9 @@ fn run(app: &mut App) -> Result<()> {
                             // Check if this is Ctrl+I (which sends Tab with CONTROL modifier)
                             if mods.contains(KeyModifiers::CONTROL) {
                                 // This is actually Ctrl+I for file picker
+                                eprintln!("DEBUG: Ctrl+I detected, opening file picker");
                                 let _ = app.begin_file_picker();
+                                eprintln!("DEBUG: app.picking_file = {}", app.picking_file);
                             } else if app.show_left_pane {
                                 // Tab between left pane and right pane (in whatever mode it's in)
                                 app.focus = match app.focus {
@@ -264,6 +266,12 @@ fn run(app: &mut App) -> Result<()> {
                         }
                         // 'p' previously toggled preview; now preview is always on, so ignore or repurpose later
                         (KeyCode::Char('?'), _) => app.toggle_help(),
+                        // Add explicit handler for 'i' with Control modifier as fallback
+                        (KeyCode::Char('i'), mods) if mods.contains(KeyModifiers::CONTROL) => {
+                            eprintln!("DEBUG: Ctrl+i (char) detected, opening file picker");
+                            let _ = app.begin_file_picker();
+                            eprintln!("DEBUG: app.picking_file = {}", app.picking_file);
+                        }
                         (KeyCode::Char('n'), _) if matches!(app.focus, Focus::Left) => {
                             app.begin_create_file()
                         }
@@ -308,6 +316,12 @@ fn run(app: &mut App) -> Result<()> {
                             app.toggle_left_pane();
                         }
                         // F-keys like MC
+                        (KeyCode::F(2), _) => {
+                            // F2 as alternative to Ctrl+I for file picker
+                            eprintln!("DEBUG: F2 pressed, opening file picker");
+                            let _ = app.begin_file_picker();
+                            eprintln!("DEBUG: app.picking_file = {}", app.picking_file);
+                        }
                         (KeyCode::F(3), _) => { /* Quick view handled by preview always-on */ }
                         (KeyCode::F(4), _) => {
                             app.focus = Focus::Editor;
@@ -686,7 +700,7 @@ fn ui(f: &mut Frame, app: &mut App) {
     let mut status_lines = vec![app.status.clone()];
     let files_state = if app.show_left_pane { "On" } else { "Off" };
     status_lines.push(format!("Files pane: {files_state} (Ctrl+B/F9 toggle)"));
-    status_lines.push("Keys: Tab/Shift+Tab focus | Enter open | D Delete file | F5 Copy | F6 Move | F7 Mkdir | F4 Edit | Ctrl+I link | Ctrl+S save | e edit raw | ? help".into());
+    status_lines.push("Keys: Tab/Shift+Tab focus | Enter open | D Delete file | F2 File picker | F5 Copy | F6 Move | F7 Mkdir | F4 Edit | Ctrl+S save | e edit raw | ? help".into());
     let status = Paragraph::new(status_lines.join("  ·  "))
         .style(Style::default().fg(Color::Yellow))
         .block(
@@ -720,6 +734,7 @@ fn ui(f: &mut Frame, app: &mut App) {
 
     // --- File picker overlay
     if app.picking_file {
+        eprintln!("DEBUG: Rendering file picker overlay");
         // Debug: Add a visible indicator that picker is active
         let debug_area = Rect {
             x: 0,
@@ -759,7 +774,7 @@ fn draw_centered_help(f: &mut Frame, area: Rect) {
         "Editor: type freely (Enter = newline)",
         "New file: N",
         "Delete: d (confirm)",
-        "Insert link (picker): Ctrl+I",
+        "Insert link (picker): F2 or Ctrl+I",
         "Save: Ctrl+S",
         "Open externally: o",
         "Help: ? (toggle)",
@@ -873,9 +888,9 @@ fn draw_delete_confirm(f: &mut Frame, area: Rect, target: Option<&std::path::Pat
 }
 
 fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
-    // SIMPLIFY: Just draw a bright red box in the center to see if it shows
-    let w = 60;
-    let h = 20;
+    // Create centered popup
+    let w = 70.min(area.width - 4);
+    let h = 25.min(area.height - 4);
     let x = area.x + (area.width.saturating_sub(w)) / 2;
     let y = area.y + (area.height.saturating_sub(h)) / 2;
     let popup = Rect {
@@ -885,34 +900,84 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
         height: h,
     };
 
-    // Clear the entire popup area first
+    // Clear the area and draw border
     f.render_widget(Clear, popup);
 
-    // Draw a simple bright red block to make it obvious
     let block = Block::default()
-        .title("FILE PICKER - PRESS ESC TO CLOSE")
+        .title(" File Picker ")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Red).bg(Color::Yellow))
+        .border_style(Style::default().fg(Color::Cyan))
         .style(Style::default().bg(Color::Black));
+
     f.render_widget(block.clone(), popup);
     let inner = block.inner(popup);
 
-    // SIMPLE TEST: Just show a yellow bar at the bottom of the popup
-    let text = Paragraph::new("If you see this RED TEXT, the picker is rendering!\nPress ESC to close\nPress any key to test")
-        .style(Style::default().fg(Color::Red).bg(Color::White))
-        .alignment(ratatui::layout::Alignment::Center);
+    // Split inner area into list and status bar
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(5),    // File list
+            Constraint::Length(1), // Status bar
+        ])
+        .split(inner);
 
-    f.render_widget(text, inner);
+    // Create file list
+    let items: Vec<ListItem> = app
+        .picker_items
+        .iter()
+        .enumerate()
+        .map(|(i, path)| {
+            let is_selected = i == app.picker_index;
+            let display_name = path.file_name().unwrap_or_default().to_string_lossy();
 
-    // Draw a yellow status bar at the very bottom of the popup
-    let status_bar = Rect {
-        x: inner.x,
-        y: inner.y + inner.height - 1,
-        width: inner.width,
-        height: 1,
-    };
+            let prefix = if path.is_dir() { "📁 " } else { "📄 " };
 
-    let status = Paragraph::new("D:delete M:move P:parent S:status ESC:cancel")
+            // Add Git status if available
+            let status_indicator = if let Some(ref repo) = app.git_repo {
+                if let Ok(statuses) = repo.status() {
+                    if let Some(status) = statuses.get(path) {
+                        match status {
+                            crate::git::FileStatus::Modified => " [M]",
+                            crate::git::FileStatus::Added => " [A]",
+                            crate::git::FileStatus::Deleted => " [D]",
+                            crate::git::FileStatus::Untracked => " [?]",
+                            crate::git::FileStatus::Conflicted => " [C]",
+                            _ => "",
+                        }
+                    } else {
+                        ""
+                    }
+                } else {
+                    ""
+                }
+            } else {
+                ""
+            };
+
+            let text = format!("{}{}{}", prefix, display_name, status_indicator);
+
+            let style = if is_selected {
+                Style::default()
+                    .bg(Color::Blue)
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::White)
+            };
+
+            ListItem::new(text).style(style)
+        })
+        .collect();
+
+    let list = List::new(items)
+        .block(Block::default())
+        .highlight_style(Style::default());
+
+    f.render_widget(list, chunks[0]);
+
+    // Draw status bar at bottom with commands
+    let status_text = "↑↓:navigate  Enter:select  D:delete  P:parent  S:git-status  ESC:cancel";
+    let status = Paragraph::new(status_text)
         .style(
             Style::default()
                 .fg(Color::Black)
@@ -921,7 +986,7 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
         )
         .alignment(ratatui::layout::Alignment::Center);
 
-    f.render_widget(status, status_bar);
+    f.render_widget(status, chunks[1]);
 }
 
 fn draw_op_input(f: &mut Frame, area: Rect, app: &App) {

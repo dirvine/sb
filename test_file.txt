@@ -1,1 +1,8 @@
-test change
+This is a test file for the sb file picker.
+
+Try pressing F2 to open the file picker and see if the status bar appears.
+
+The file picker should show:
+- A cyan-bordered popup window
+- Files with icons
+- A yellow status bar at the bottom with commands
