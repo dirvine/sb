@@ -1,8 +1,8 @@
+use anyhow::Result;
 use std::io::{self};
 use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::Result;
 use crossterm::{
     event::{
         self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers,
@@ -854,7 +854,7 @@ fn draw_delete_confirm(f: &mut Frame, area: Rect, target: Option<&std::path::Pat
 
 fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
     let w = area.width.min(70);
-    let h = area.height.min(20);
+    let h = area.height.min(24);
     let x = area.x + (area.width.saturating_sub(w)) / 2;
     let y = area.y + (area.height.saturating_sub(h)) / 2;
     let popup = Rect {
@@ -883,7 +883,7 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
     // Split the inner area to leave space for bottom status bar
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(0), Constraint::Length(1)])
+        .constraints([Constraint::Min(3), Constraint::Length(1)])
         .split(inner);
 
     let list_area = chunks[0];

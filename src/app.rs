@@ -541,6 +541,10 @@ impl App {
         self.picker_dir = dir;
         self.picker_items = items;
         self.picker_index = 0;
+
+        // Refresh Git status when loading new directory
+        self.refresh_git_status();
+
         Ok(())
     }
 
