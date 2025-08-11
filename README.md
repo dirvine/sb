@@ -2,6 +2,16 @@
 
 `sb` (Saorsa Browser) is a fast, secure, keyboard-centric terminal UI for browsing and editing Markdown notes and code. It blends a rendered Markdown preview, inline media, Git-aware diffs, and inline editing into a single, ergonomic interface with enterprise-grade security features.
 
+## Screenshots
+
+### Markdown Preview with Git Diff
+![Markdown Preview with Git Diff](docs/screenshots/markdown-preview.png)
+*Viewing CHANGELOG.md with syntax highlighting and Git diff showing changes against HEAD*
+
+### Code Editing with Syntax Highlighting
+![Code Editing](docs/screenshots/code-editing.png)
+*Editing Rust code (main.rs) with syntax highlighting, file tree navigation, and real-time Git diff*
+
 ## Highlights
 
 ### Core Features
