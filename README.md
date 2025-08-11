@@ -78,6 +78,9 @@ cargo run --release -- /path/to/your/notes
 # Run with debug logging
 RUST_LOG=debug ./target/release/sb /path/to/your/notes
 
+# Test file picker functionality
+./test_sb.sh  # Interactive test script for file picker
+
 # Run performance demo
 cargo run --example performance_demo
 
@@ -118,7 +121,7 @@ The application supports environment-based configuration:
 - **←→**: Scroll horizontally
 - **e**: Enter raw editor mode
 - **Mouse wheel**: Scroll content
-- **Ctrl+I**: Insert link via file picker
+- **Ctrl+I**: Insert link via file picker (see File Picker section)
 - **Ctrl+S**: Save current file
 
 ### Editor Mode (Right Pane)
@@ -136,6 +139,22 @@ The application supports environment-based configuration:
 ### General
 - **?**: Toggle help overlay
 - **Ctrl+S**: Save current file
+
+### File Picker (Ctrl+I)
+The file picker provides Git-aware file selection with the following features:
+- **↑↓ or j/k**: Navigate files
+- **Enter**: Select file and insert link
+- **D**: Delete file (with Git rm support if in repo)
+- **P**: Navigate to parent directory
+- **S**: Show Git repository status
+- **ESC**: Cancel and return to editor
+
+Git status indicators on files:
+- **[M]**: Modified (yellow)
+- **[A]**: Added (green)
+- **[D]**: Deleted (red)
+- **[?]**: Untracked (blue)
+- **[C]**: Conflicted (magenta)
 
 ## UI Features
 
