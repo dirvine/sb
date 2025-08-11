@@ -593,29 +593,40 @@ impl App {
 
     /// Start move operation (M command)
     pub fn picker_start_move(&mut self) -> Result<()> {
+        self.status = format!(
+            "M: picker_index={}, items={}",
+            self.picker_index,
+            self.picker_items.len()
+        );
         if let Some(path) = self.picker_items.get(self.picker_index).cloned() {
+            self.status = format!("M: path={}, is_file={}", path.display(), path.is_file());
             if path.is_file() {
                 self.move_source = Some(path);
                 self.showing_move_dest = true;
                 self.move_dest_dir = self.picker_dir.clone();
                 self.load_move_dest_dir(self.move_dest_dir.clone())?;
                 self.status = "Select move destination".to_string();
+            } else {
+                self.status = "M: Can only move files, not directories".to_string();
             }
+        } else {
+            self.status = "M: No item selected".to_string();
         }
         Ok(())
     }
 
     /// Show Git status (S command)
     pub fn picker_show_git_status(&mut self) {
+        self.status = format!("S: git_repo={}", self.git_repo.is_some());
         if let Some(ref repo) = self.git_repo {
             match repo.status_summary() {
                 Ok(summary) => {
-                    self.git_status_text = summary;
+                    self.git_status_text = summary.clone();
                     self.showing_git_status = true;
-                    self.status = "Showing Git status".to_string();
+                    self.status = format!("Git status: {}", summary);
                 }
-                Err(_) => {
-                    self.status = "Failed to get Git status".to_string();
+                Err(e) => {
+                    self.status = format!("Failed to get Git status: {}", e);
                 }
             }
         } else {

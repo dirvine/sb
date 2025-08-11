@@ -81,12 +81,14 @@ fn run(app: &mut App) -> Result<()> {
                                 let _ = app.picker_delete_with_git_check();
                             }
                             (KeyCode::Char('m'), _) => {
+                                app.status = "M key pressed - starting move".to_string();
                                 let _ = app.picker_start_move();
                             }
                             (KeyCode::Char('p'), _) => {
                                 let _ = app.picker_parent_dir();
                             }
                             (KeyCode::Char('s'), _) => {
+                                app.status = "S key pressed - showing git status".to_string();
                                 app.picker_show_git_status();
                             }
                             _ => {}
@@ -859,7 +861,7 @@ fn draw_delete_confirm(f: &mut Frame, area: Rect, target: Option<&std::path::Pat
 
 fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
     let w = area.width.min(70);
-    let h = area.height.min(30); // Increased from 24 to ensure status bar is visible
+    let h = area.height.min(30);
     let x = area.x + (area.width.saturating_sub(w)) / 2;
     let y = area.y + (area.height.saturating_sub(h)) / 2;
     let popup = Rect {
@@ -885,14 +887,20 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(block.clone(), popup);
     let inner = block.inner(popup);
 
-    // Split the inner area to leave space for bottom status bar
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(5), Constraint::Length(2)]) // Give more space for status bar
-        .split(inner);
+    // Calculate list area and status area manually
+    let list_area = Rect {
+        x: inner.x,
+        y: inner.y,
+        width: inner.width,
+        height: inner.height.saturating_sub(2), // Leave 2 lines for status
+    };
 
-    let list_area = chunks[0];
-    let status_area = chunks[1];
+    let status_area = Rect {
+        x: inner.x,
+        y: inner.y + inner.height.saturating_sub(2), // Position at bottom
+        width: inner.width,
+        height: 2,
+    };
 
     let items: Vec<ListItem> = app
         .picker_items
@@ -962,18 +970,30 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(list, list_area);
 
     // Draw bottom status bar with commands
+    // First clear the area with a bright background to ensure visibility
+    f.render_widget(
+        Block::default().style(Style::default().bg(Color::Yellow)),
+        status_area,
+    );
+
     let status_text = if app.git_repo.is_some() {
         format!(
-            "D:delete M:move P:parent S:status ESC:cancel [GIT:{}]",
+            " D:delete M:move P:parent S:status ESC:cancel [GIT:{}] ",
             app.git_status.len()
         )
     } else {
-        "D:delete M:move P:parent ESC:cancel [NO-GIT]".to_string()
+        " D:delete M:move P:parent ESC:cancel [NO-GIT] ".to_string()
     };
 
     let status_bar = Paragraph::new(status_text)
-        .style(Style::default().fg(Color::Black).bg(Color::Yellow))
-        .alignment(ratatui::layout::Alignment::Center);
+        .style(
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
+        .alignment(ratatui::layout::Alignment::Center)
+        .block(Block::default().borders(Borders::TOP));
     f.render_widget(status_bar, status_area);
 }
 
