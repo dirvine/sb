@@ -77,17 +77,21 @@ fn run(app: &mut App) -> Result<()> {
                             (KeyCode::Up, _) | (KeyCode::Char('k'), _) => app.picker_up(),
                             (KeyCode::Down, _) | (KeyCode::Char('j'), _) => app.picker_down(),
                             // New Git-aware file picker commands
-                            (KeyCode::Char('d'), _) => {
+                            (KeyCode::Char('d') | KeyCode::Char('D'), _) => {
                                 let _ = app.picker_delete_with_git_check();
                             }
-                            (KeyCode::Char('m'), _) => {
+                            (KeyCode::Char('m') | KeyCode::Char('M'), _) => {
                                 let _ = app.picker_start_move();
                             }
-                            (KeyCode::Char('p'), _) => {
+                            (KeyCode::Char('p') | KeyCode::Char('P'), _) => {
                                 let _ = app.picker_parent_dir();
                             }
-                            (KeyCode::Char('s'), _) => {
+                            (KeyCode::Char('s') | KeyCode::Char('S'), _) => {
                                 app.picker_show_git_status();
+                            }
+                            (KeyCode::Char(c), _) => {
+                                // Debug: show what key was pressed
+                                app.status = format!("File picker: Unknown key '{}'", c);
                             }
                             _ => {}
                         }
@@ -869,6 +873,9 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
         height: h,
     };
 
+    // Clear the entire popup area first
+    f.render_widget(Clear, popup);
+
     // Show Git repository indicator in title if in Git repo
     let git_indicator = if app.git_repo.is_some() { " [Git]" } else { "" };
     let title = format!(
@@ -881,33 +888,28 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
         .title(title)
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Magenta));
-    f.render_widget(Clear, popup);
     f.render_widget(block.clone(), popup);
     let inner = block.inner(popup);
 
-    // Ensure we have enough space for the status bar
-    if inner.height < 3 {
-        // If not enough space, just render the list
-        f.render_widget(
-            Paragraph::new("Window too small").style(Style::default().fg(Color::Red)),
-            inner,
-        );
-        return;
-    }
-
-    // Calculate list area and status area manually
+    // Manually calculate areas to ensure status bar is visible
+    // Reserve bottom 2 lines for status bar
+    let status_height = 2;
     let list_area = Rect {
         x: inner.x,
         y: inner.y,
         width: inner.width,
-        height: inner.height.saturating_sub(2), // Leave 2 lines for status
+        height: if inner.height > status_height {
+            inner.height - status_height
+        } else {
+            inner.height.saturating_sub(1)
+        },
     };
 
     let status_area = Rect {
         x: inner.x,
-        y: inner.y + inner.height.saturating_sub(2), // Position at bottom
+        y: inner.y + list_area.height, // Start right after the list
         width: inner.width,
-        height: 2,
+        height: status_height.min(inner.height.saturating_sub(list_area.height)),
     };
 
     let items: Vec<ListItem> = app
@@ -978,52 +980,29 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(list, list_area);
 
     // Draw bottom status bar with commands
-    // First draw a separator line
-    let separator_area = Rect {
-        x: status_area.x,
-        y: status_area.y,
-        width: status_area.width,
-        height: 1,
-    };
+    // First fill the entire status area with a visible background
     f.render_widget(
-        Block::default()
-            .borders(Borders::TOP)
-            .border_style(Style::default().fg(Color::Yellow)),
-        separator_area,
+        Block::default().style(Style::default().bg(Color::Yellow)),
+        status_area,
     );
-
-    // Then draw the status text
-    let text_area = Rect {
-        x: status_area.x,
-        y: status_area.y + 1,
-        width: status_area.width,
-        height: 1,
-    };
 
     let status_text = if app.git_repo.is_some() {
-        format!(
-            "D:delete  M:move  P:parent  S:status  ESC:cancel  [GIT:{}]",
-            app.git_status.len()
-        )
+        " D:delete  M:move  P:parent  S:status  ESC:cancel  [GIT] "
     } else {
-        "D:delete  M:move  P:parent  ESC:cancel  [NO-GIT]".to_string()
+        " D:delete  M:move  P:parent  ESC:cancel  [NO-GIT] "
     };
 
-    // Clear the text area first with a distinct background
-    f.render_widget(
-        Block::default().style(Style::default().bg(Color::DarkGray)),
-        text_area,
-    );
-
-    let status_bar = Paragraph::new(status_text)
+    // Now draw the text on top
+    let status_paragraph = Paragraph::new(status_text)
         .style(
             Style::default()
-                .fg(Color::Yellow)
-                .bg(Color::DarkGray)
+                .fg(Color::Black)
+                .bg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         )
         .alignment(ratatui::layout::Alignment::Center);
-    f.render_widget(status_bar, text_area);
+
+    f.render_widget(status_paragraph, status_area);
 }
 
 fn draw_op_input(f: &mut Frame, area: Rect, app: &App) {
