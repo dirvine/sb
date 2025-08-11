@@ -102,6 +102,9 @@ The application supports environment-based configuration:
 
 ### Navigation & Focus
 - **Tab / Shift+Tab**: Cycle focus between visible panes
+- **Left/Right Arrows**: Smart pane switching (in Preview/Files modes only)
+  - **Left Arrow in Preview**: Switch to Files pane (if visible)
+  - **Right Arrow in Files**: Switch to Preview/Editor pane (expands directories first)
 - **Ctrl+B or F9**: Toggle Files pane visibility
 - **Q or F10**: Quit application (prominent yellow indicator in top-left)
 - **Esc**: Exit raw editor mode or quit from preview
