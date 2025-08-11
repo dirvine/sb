@@ -171,47 +171,46 @@ fn run(app: &mut App) -> Result<()> {
                             }
                         }
                         (KeyCode::Tab, _) => {
-                            app.focus = if app.show_left_pane {
-                                match app.focus {
+                            if app.show_left_pane {
+                                // Tab between left pane and right pane (in whatever mode it's in)
+                                app.focus = match app.focus {
                                     Focus::Left => {
-                                        // Smart navigation: if a file is open, go directly to editor
-                                        if app.opened.is_some() {
+                                        // Moving to right pane - decide which mode based on preference
+                                        if app.prefer_raw_editor && app.opened.is_some() {
                                             Focus::Editor
                                         } else {
                                             Focus::Preview
                                         }
                                     }
-                                    Focus::Preview => Focus::Editor,
-                                    Focus::Editor => Focus::Left,
+                                    Focus::Preview | Focus::Editor => Focus::Left,
+                                };
+                                // Restore raw editor mode if user was in it and we're now on Editor focus
+                                if matches!(app.focus, Focus::Editor) && app.prefer_raw_editor {
+                                    app.show_raw_editor = true;
                                 }
-                            } else {
-                                match app.focus {
-                                    Focus::Preview => Focus::Editor,
-                                    _ => Focus::Preview,
-                                }
-                            };
-                            // Restore raw editor mode if user was in it and we're now on Editor focus
-                            if matches!(app.focus, Focus::Editor) && app.prefer_raw_editor {
-                                app.show_raw_editor = true;
                             }
+                            // If left pane is hidden, Tab does nothing (only one pane visible)
                         }
                         (KeyCode::BackTab, _) => {
-                            app.focus = if app.show_left_pane {
-                                match app.focus {
-                                    Focus::Left => Focus::Editor,
-                                    Focus::Editor => Focus::Preview,
-                                    Focus::Preview => Focus::Left,
+                            if app.show_left_pane {
+                                // BackTab between left pane and right pane (same as Tab since only 2 panes)
+                                app.focus = match app.focus {
+                                    Focus::Left => {
+                                        // Moving to right pane - decide which mode based on preference
+                                        if app.prefer_raw_editor && app.opened.is_some() {
+                                            Focus::Editor
+                                        } else {
+                                            Focus::Preview
+                                        }
+                                    }
+                                    Focus::Preview | Focus::Editor => Focus::Left,
+                                };
+                                // Restore raw editor mode if user was in it and we're now on Editor focus
+                                if matches!(app.focus, Focus::Editor) && app.prefer_raw_editor {
+                                    app.show_raw_editor = true;
                                 }
-                            } else {
-                                match app.focus {
-                                    Focus::Preview => Focus::Editor,
-                                    _ => Focus::Preview,
-                                }
-                            };
-                            // Restore raw editor mode if user was in it and we're now on Editor focus
-                            if matches!(app.focus, Focus::Editor) && app.prefer_raw_editor {
-                                app.show_raw_editor = true;
                             }
+                            // If left pane is hidden, BackTab does nothing (only one pane visible)
                         }
                         // 'p' previously toggled preview; now preview is always on, so ignore or repurpose later
                         (KeyCode::Char('?'), _) => app.toggle_help(),

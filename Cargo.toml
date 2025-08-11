@@ -1,6 +1,6 @@
 [package]
 name = "sb"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 authors = ["David Irvine <david.irvine@maidsafe.net>"]
 description = "Terminal Markdown Browser/Editor with Vim-like features and media support"
