@@ -56,18 +56,6 @@ fn run(app: &mut App) -> Result<()> {
         if event::poll(Duration::from_millis(200))? {
             match event::read()? {
                 Event::Key(k) => {
-                    // Debug: Log every key press at the VERY beginning
-                    app.status = format!(
-                        "Key: {:?} Mods: {:?} Focus: {:?} States: c={} p={} h={} r={}",
-                        k.code,
-                        k.modifiers,
-                        app.focus,
-                        app.creating_file,
-                        app.picking_file,
-                        app.show_help,
-                        app.show_raw_editor
-                    );
-
                     if app.creating_file {
                         match (k.code, k.modifiers) {
                             (KeyCode::Enter, _) => {
@@ -228,20 +216,7 @@ fn run(app: &mut App) -> Result<()> {
                             // Check if this is Ctrl+I (which sends Tab with CONTROL modifier)
                             if mods.contains(KeyModifiers::CONTROL) {
                                 // This is actually Ctrl+I for file picker
-                                app.status =
-                                    "CTRL+I (Tab+Ctrl) PRESSED - CALLING begin_file_picker"
-                                        .to_string();
-                                match app.begin_file_picker() {
-                                    Ok(_) => {
-                                        app.status = format!(
-                                            "PICKER OPENED! picking_file={}",
-                                            app.picking_file
-                                        );
-                                    }
-                                    Err(e) => {
-                                        app.status = format!("ERROR opening picker: {}", e);
-                                    }
-                                }
+                                let _ = app.begin_file_picker();
                             } else if app.show_left_pane {
                                 // Tab between left pane and right pane (in whatever mode it's in)
                                 app.focus = match app.focus {
@@ -883,20 +858,6 @@ fn draw_delete_confirm(f: &mut Frame, area: Rect, target: Option<&std::path::Pat
 }
 
 fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
-    // Debug: Draw a simple visible indicator first
-    let debug_text = format!("FILE PICKER ACTIVE - {} items", app.picker_items.len());
-    let debug_para =
-        Paragraph::new(debug_text).style(Style::default().fg(Color::Red).bg(Color::Yellow));
-    f.render_widget(
-        debug_para,
-        Rect {
-            x: 5,
-            y: 5,
-            width: 50,
-            height: 1,
-        },
-    );
-
     let w = area.width.min(70);
     let h = area.height.min(30); // Increased from 24 to ensure status bar is visible
     let x = area.x + (area.width.saturating_sub(w)) / 2;

@@ -483,7 +483,6 @@ impl App {
             .unwrap_or_else(|| self.root.clone());
         self.load_picker_dir(start)?;
         self.picking_file = true;
-        self.status = "FILE PICKER OPENED - DEBUG".to_string(); // Debug message
         Ok(())
     }
 
