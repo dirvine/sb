@@ -101,7 +101,12 @@ impl GitRepository {
             if let Some(path) = entry.path() {
                 let path = self.root.join(path);
                 let status = FileStatus::from(entry.status());
-                result.insert(path, status);
+
+                // Insert both the path and its canonical version for better matching
+                result.insert(path.clone(), status);
+                if let Ok(canonical) = path.canonicalize() {
+                    result.insert(canonical, status);
+                }
             }
         }
 

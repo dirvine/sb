@@ -483,6 +483,7 @@ impl App {
             .unwrap_or_else(|| self.root.clone());
         self.load_picker_dir(start)?;
         self.picking_file = true;
+        self.status = "FILE PICKER OPENED - DEBUG".to_string(); // Debug message
         Ok(())
     }
 
@@ -818,7 +819,19 @@ impl App {
 
     /// Get the Git status of a file
     pub fn get_file_git_status(&self, path: &Path) -> Option<FileStatus> {
-        self.git_status.get(path).copied()
+        // Try both absolute and canonical paths
+        if let Some(status) = self.git_status.get(path).copied() {
+            return Some(status);
+        }
+
+        // Try canonical path if available
+        if let Ok(canonical_path) = path.canonicalize() {
+            if let Some(status) = self.git_status.get(&canonical_path).copied() {
+                return Some(status);
+            }
+        }
+
+        None
     }
 
     /// Check if file preview should show diff

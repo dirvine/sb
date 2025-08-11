@@ -56,6 +56,18 @@ fn run(app: &mut App) -> Result<()> {
         if event::poll(Duration::from_millis(200))? {
             match event::read()? {
                 Event::Key(k) => {
+                    // Debug: Log every key press at the VERY beginning
+                    app.status = format!(
+                        "Key: {:?} Mods: {:?} Focus: {:?} States: c={} p={} h={} r={}",
+                        k.code,
+                        k.modifiers,
+                        app.focus,
+                        app.creating_file,
+                        app.picking_file,
+                        app.show_help,
+                        app.show_raw_editor
+                    );
+
                     if app.creating_file {
                         match (k.code, k.modifiers) {
                             (KeyCode::Enter, _) => {
@@ -201,6 +213,8 @@ fn run(app: &mut App) -> Result<()> {
                         }
                         continue;
                     }
+                    // Debug already at top, don't duplicate
+
                     match (k.code, k.modifiers) {
                         (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
                             break
@@ -210,8 +224,25 @@ fn run(app: &mut App) -> Result<()> {
                                 break;
                             }
                         }
-                        (KeyCode::Tab, _) => {
-                            if app.show_left_pane {
+                        (KeyCode::Tab, mods) => {
+                            // Check if this is Ctrl+I (which sends Tab with CONTROL modifier)
+                            if mods.contains(KeyModifiers::CONTROL) {
+                                // This is actually Ctrl+I for file picker
+                                app.status =
+                                    "CTRL+I (Tab+Ctrl) PRESSED - CALLING begin_file_picker"
+                                        .to_string();
+                                match app.begin_file_picker() {
+                                    Ok(_) => {
+                                        app.status = format!(
+                                            "PICKER OPENED! picking_file={}",
+                                            app.picking_file
+                                        );
+                                    }
+                                    Err(e) => {
+                                        app.status = format!("ERROR opening picker: {}", e);
+                                    }
+                                }
+                            } else if app.show_left_pane {
                                 // Tab between left pane and right pane (in whatever mode it's in)
                                 app.focus = match app.focus {
                                     Focus::Left => {
@@ -260,9 +291,8 @@ fn run(app: &mut App) -> Result<()> {
                         (KeyCode::Char('d'), _) if matches!(app.focus, Focus::Left) => {
                             app.begin_delete()
                         }
-                        (KeyCode::Char('i'), KeyModifiers::CONTROL) => {
-                            let _ = app.begin_file_picker();
-                        }
+                        // Note: Ctrl+I is handled above in the Tab handler because terminals
+                        // send Tab for Ctrl+I (historical terminal convention)
                         (KeyCode::Char('s'), KeyModifiers::CONTROL) => {
                             let _ = app.save();
                         }
@@ -853,8 +883,22 @@ fn draw_delete_confirm(f: &mut Frame, area: Rect, target: Option<&std::path::Pat
 }
 
 fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
+    // Debug: Draw a simple visible indicator first
+    let debug_text = format!("FILE PICKER ACTIVE - {} items", app.picker_items.len());
+    let debug_para =
+        Paragraph::new(debug_text).style(Style::default().fg(Color::Red).bg(Color::Yellow));
+    f.render_widget(
+        debug_para,
+        Rect {
+            x: 5,
+            y: 5,
+            width: 50,
+            height: 1,
+        },
+    );
+
     let w = area.width.min(70);
-    let h = area.height.min(24);
+    let h = area.height.min(30); // Increased from 24 to ensure status bar is visible
     let x = area.x + (area.width.saturating_sub(w)) / 2;
     let y = area.y + (area.height.saturating_sub(h)) / 2;
     let popup = Rect {
@@ -883,7 +927,7 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
     // Split the inner area to leave space for bottom status bar
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(3), Constraint::Length(1)])
+        .constraints([Constraint::Min(5), Constraint::Length(2)]) // Give more space for status bar
         .split(inner);
 
     let list_area = chunks[0];
@@ -958,13 +1002,17 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
 
     // Draw bottom status bar with commands
     let status_text = if app.git_repo.is_some() {
-        "D:delete M:move P:parent S:status ESC:cancel"
+        format!(
+            "D:delete M:move P:parent S:status ESC:cancel [GIT:{}]",
+            app.git_status.len()
+        )
     } else {
-        "D:delete M:move P:parent ESC:cancel"
+        "D:delete M:move P:parent ESC:cancel [NO-GIT]".to_string()
     };
 
-    let status_bar =
-        Paragraph::new(status_text).style(Style::default().fg(Color::White).bg(Color::Blue));
+    let status_bar = Paragraph::new(status_text)
+        .style(Style::default().fg(Color::Black).bg(Color::Yellow))
+        .alignment(ratatui::layout::Alignment::Center);
     f.render_widget(status_bar, status_area);
 }
 
