@@ -11,8 +11,8 @@
 - **Syntax Highlighting**: Full support for code (Rust, TypeScript, JavaScript, Python) via syntect
 - **Git Integration**: Real-time diff vs HEAD with visual change indicators
 - **Inline Editing**: Per-line editing in preview mode or full editor pane
-- **Command Mode**: Vim-style `:w`, `:q`, `:wq` commands
-- **File Operations**: Midnight-Commander-style Copy/Move/Mkdir/Delete
+- **Command Mode**: Basic commands `:w` (save), `:q` (quit), `:wq` (save and quit)
+- **File Operations**: Midnight-Commander-style Copy/Move/Mkdir/Delete with modern confirmation dialogs
 
 ### Security & Performance Features
 - **🔒 Security Hardening**: Complete path traversal protection and input validation
@@ -86,80 +86,117 @@ The application supports environment-based configuration:
 
 ## Keybindings
 
-- Pane focus
-  - Tab / Shift+Tab: cycle focus (Left ↔ Preview ↔ Editor).
-  - Ctrl+B or F9: toggle Files pane.
-- Files (Left pane)
-  - Enter: toggle folder / open file
-  - F5 Copy, F6 Move, F7 Mkdir, F8 Delete
-  - N: new file (Markdown suggested)
-- Preview (Right pane)
-  - Rendered Markdown with raw-line overlay (yellow) + line number gutter
-  - Scroll: Up/Down arrows or j/k; mouse wheel supported
-  - Raw edit toggle: press `e` to enter full raw edit; Esc to return to preview
-- Editor (Right pane)
-  - `:` to open command prompt; supported: `:w`, `:q`, `:wq`
-  - Scroll with mouse wheel
-- Video playback (from `[video](path)` links in Markdown)
-  - Autoplays first link in preview
-  - Space: pause/resume, `s`: stop
-- General
-  - `?` or `h`: help
-  - `Q` / Esc: quit (Esc also cancels dialogs)
+### Navigation & Focus
+- **Tab / Shift+Tab**: Cycle focus between visible panes
+- **Ctrl+B or F9**: Toggle Files pane visibility
+- **Q or F10**: Quit application (prominent yellow indicator in top-left)
+- **Esc**: Exit raw editor mode or quit from preview
+
+### Files Pane (Left)
+- **↑↓←→ or j/k**: Navigate file tree
+- **Enter**: Toggle folder / open file
+- **D**: Delete file/folder (modern confirmation dialog)
+- **N**: Create new file (.md extension suggested)
+- **F5**: Copy file/folder
+- **F6**: Move/rename file/folder
+- **F7**: Create new directory
+- **F8**: Delete (same as D)
+- **O**: Open file externally in default application
+
+### Preview Mode (Right Pane)
+- **↑↓ or j/k**: Scroll content
+- **←→**: Scroll horizontally
+- **e**: Enter raw editor mode
+- **Mouse wheel**: Scroll content
+- **Ctrl+I**: Insert link via file picker
+- **Ctrl+S**: Save current file
+
+### Editor Mode (Right Pane)
+- **Full text editing**: Type freely to edit content
+- **:**: Open command prompt (supports `:w` save, `:q` quit, `:wq` save & quit)
+- **Esc**: Return to preview mode
+- **Tab**: Temporarily exit editor (remembers state when returning)
+- **Mouse wheel**: Scroll content
+
+### Video Playback
+- **Space**: Pause/resume video
+- **s**: Stop video
+- **Ctrl+V**: Toggle autoplay for videos
+
+### General
+- **?**: Toggle help overlay
+- **Ctrl+S**: Save current file
+
+## UI Features
+
+### Visual Indicators
+- **Q: Quit**: Prominent yellow badge in top-left corner for easy exit
+- **Focus Indicators**: Cyan border for active pane, blue for inactive
+- **File Status**: Git changes shown with visual diff indicators
+- **Status Bar**: Shows current mode, available commands, and file status
+
+### Modern Dialogs
+- **Delete Confirmation**: Azure-style modal with:
+  - Warning icon (⚠️) in title
+  - Highlighted filename
+  - Color-coded confirm (green) / cancel (red) buttons
+  - "This action cannot be undone" warning
+  - Semi-transparent background overlay
 
 ## How it Works
 
-- Markdown preview
-  - Parsed to styled `ratatui::widgets::Paragraph` text.
-  - When editing context is needed, the current line overlays on top of the preview (bold black-on-yellow) with a blue line-number gutter, while the rest remains dim-rendered for context.
-- Images
-  - Loaded via `image` and rendered with `ratatui-image`.
-- Videos
-  - `ffmpeg` is spawned to output MJPEG frames (`image2pipe`); frames are decoded and displayed in a small area of the preview.
-- Code highlighting + diff
-  - syntect provides syntax highlighting (rs/ts/tsx/js/jsx/py).
-  - `git show HEAD:<relative-path>` is diffed against the current buffer (lines) and shown beneath the code when changes exist.
-- Editing
-  - Per-line inline edits (Preview) save immediately on Enter.
-  - Editor pane offers a minimal `:` command mode.
+### Markdown Rendering
+- Markdown files are parsed and rendered as styled terminal text
+- Current line shows as raw text overlay (yellow background) with line numbers
+- Rest of content remains rendered for context while editing
+
+### Media Support
+- **Images**: Loaded via `image` crate and rendered inline with `ratatui-image`
+- **Videos**: Uses ffmpeg to extract frames, displayed in preview area
+  - Supports `[video](path.mp4)` markdown syntax
+  - Automatic playback of first video in document
+
+### Code Features
+- **Syntax Highlighting**: Via syntect for Rust, TypeScript, JavaScript, Python, etc.
+- **Git Integration**: Shows diff against HEAD for tracked files
+- **Line-by-line comparison**: Visual indicators for added/modified/deleted lines
+
+### Editing Modes
+- **Preview Mode**: View rendered content with single-line editing capability
+- **Editor Mode**: Full text editor with syntax awareness
+- **Command Mode**: Quick commands via `:` prefix
 
 ## Troubleshooting
 
 ### General Issues
-- **Preview shows raw text, not rendered Markdown**
-  - Ensure you opened a `.md` file. The preview renders Markdown; only the current line overlays as raw (yellow) for edit context.
-- **ffmpeg playback doesn't work**
-  - Verify `ffmpeg` is installed and in PATH.
-- **Terminal rendering issues**
-  - Use a modern terminal emulator; ensure truecolor support.
-- **Git diff not shown**
-  - File must be tracked. Ensure repo is initialized and the file has a HEAD version.
+- **Preview shows raw text**: Ensure file has `.md` extension
+- **Video playback fails**: Verify ffmpeg is installed and in PATH
+- **Terminal rendering issues**: Use modern terminal with truecolor support
+- **Git diff not shown**: File must be tracked in git repository
 
 ### Security & Performance
-- **File access denied**
-  - Path validation active - files must be within the specified base directory
-  - Check permissions and ensure path doesn't contain `../` or hidden files
-- **File too large error**
-  - Default limit is 10MB for files, 1MB for previews
-  - Large files are processed via streaming to prevent memory issues
-- **Slow performance**
-  - Enable debug logging with `RUST_LOG=debug` to see cache hit rates
-  - Directory caching improves repeated navigation performance
-  - Check available memory if handling many large files
+- **File access denied**: Files must be within base directory, no `../` paths
+- **File too large**: Default 10MB limit for files, 1MB for previews
+- **Slow performance**: Enable `RUST_LOG=debug` to check cache hit rates
 
 ### Monitoring & Debugging
-- **Enable structured logging**: Set `RUST_LOG=debug` for detailed performance metrics
-- **View security events**: Security validation failures are logged with context
-- **Performance metrics**: Cache hit rates and operation timings included in debug logs
+- **Enable logging**: Set `RUST_LOG=debug` for detailed metrics
+- **Security events**: Validation failures logged with context
+- **Performance metrics**: Cache hit rates and timings in debug logs
 
 ## Roadmap
 
-- Richer motions/operations in Preview and Editor (Home/End/words, undo/redo)
-- Inline code block rendering improvements and scrolling
-- Video timing and seeking (not only last-frame display)
-- Configurable theme and keybindings
+- Enhanced text navigation (word-by-word movement, paragraph jumps)
+- Undo/redo functionality
+- Inline code block improvements
+- Video seeking and timing controls
+- Configurable themes and keybindings
+- Search functionality within files
+- Multiple file tabs
 
 ## Notes
 
-- This is a terminal UI; mouse is optional and limited.
-- Tested on macOS. Linux should work with a recent Rust and `ffmpeg`.
+- Terminal UI optimized for keyboard navigation
+- Mouse support available but optional
+- Tested on macOS and Linux with modern terminals
+- Requires UTF-8 terminal encoding for proper rendering
