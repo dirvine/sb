@@ -9,7 +9,7 @@
 *Viewing CHANGELOG.md with syntax highlighting and Git diff showing changes against HEAD*
 
 ### Code Editing with Syntax Highlighting
-![Code Editing](docs/screenshots/code-editing.png)
+![Code Editing](docs/screenshots/code-editor.png)
 *Editing Rust code (main.rs) with syntax highlighting, file tree navigation, and real-time Git diff*
 
 ## Highlights
