@@ -29,7 +29,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # TUI + input
 ratatui = "0.29"         # UI framework
-crossterm = "0.28"       # cross‑platform terminal backend
+crossterm = "0.29"       # cross‑platform terminal backend
 
 # Editor widget (aligned to ratatui 0.29)
 # NOTE: ensure the `ratatui` feature is on for compatibility
