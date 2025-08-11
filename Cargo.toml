@@ -17,7 +17,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 anyhow = "1"
-thiserror = "1"
+thiserror = "2"
 regex = "1"
 
 # Async runtime and utilities
