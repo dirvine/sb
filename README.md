@@ -127,6 +127,7 @@ The application supports environment-based configuration:
 ### Preview Mode (Right Pane)
 - **↑↓ or j/k**: Scroll content
 - **←→**: Scroll horizontally
+- **h**: Toggle Files pane visibility (hide/show)
 - **e**: Enter raw editor mode
 - **Mouse wheel**: Scroll content
 - **Ctrl+I**: Insert link via file picker (see File Picker section)

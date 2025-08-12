@@ -354,10 +354,10 @@ fn run(app: &mut App) -> Result<()> {
                                 Focus::Preview => {}
                             }
                         }
-                        // Hide files pane with 'H' when in Preview
+                        // Toggle files pane with 'h' when in Preview
                         (KeyCode::Char('h'), _) => {
                             if matches!(app.focus, Focus::Preview) {
-                                app.show_left_pane = false;
+                                app.toggle_left_pane();
                             }
                         }
                         (KeyCode::Char('e'), _) => {

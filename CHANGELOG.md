@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved keyboard navigation flow for better user experience
 - Enhanced pane switching logic with context-aware behavior
 
+### Fixed
+- **H key now toggles Files pane**: Previously 'h' in Preview mode would hide the Files pane with no way to restore it using the same key. Now it properly toggles visibility
+
 ## [0.3.2] - 2025-01-12
 
 ### Added
