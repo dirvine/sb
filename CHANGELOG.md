@@ -5,7 +5,30 @@ All notable changes to Saorsa Browser (sb) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2025-01-XX
+## [0.3.3] - 2025-01-12
+
+### Added
+- **Arrow key pane switching**: Smart navigation between panes using arrow keys in Preview and Files modes
+  - Left arrow in Preview switches to Files pane (if visible)
+  - Right arrow in Files switches to Preview/Editor (expands directories first)
+- Updated screenshots showcasing the latest UI improvements
+
+### Changed
+- Improved keyboard navigation flow for better user experience
+- Enhanced pane switching logic with context-aware behavior
+
+## [0.3.2] - 2025-01-12
+
+### Added
+- **Context-sensitive status bar**: Persistent cyan status bar showing dynamic commands based on current mode
+- Real-time status updates when switching between Preview/Editor/Files modes
+- Clear visual feedback for available commands in each context
+
+### Fixed
+- Removed excessive debug output that was causing terminal rendering issues
+- Improved file picker stability and rendering
+
+## [0.2.0] - 2025-01-11
 
 ### 🔒 Security Hardening
 - **Added**: Comprehensive path traversal protection with `validate_path()` function
