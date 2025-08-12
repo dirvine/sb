@@ -1,6 +1,6 @@
 # sb — Terminal Markdown Browser/Editor
 
-[![Version](https://img.shields.io/badge/version-0.3.3-blue.svg)](https://github.com/davidirvine/saorsa-browser)
+[![Version](https://img.shields.io/badge/version-0.3.4-blue.svg)](https://github.com/davidirvine/saorsa-browser)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.70-orange.svg)](https://www.rust-lang.org)
 
