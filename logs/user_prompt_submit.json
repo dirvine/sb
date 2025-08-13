@@ -201,5 +201,12 @@
     "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
     "hook_event_name": "UserPromptSubmit",
     "prompt": "/commit and publsih to crates.io"
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "it works, but the problem is the file chooser doesnt refresh, so the file looks as though its still there "
   }
 ]

@@ -698,7 +698,18 @@ impl App {
 
             // Refresh the UI - picker if in picker mode, otherwise main tree
             if self.picking_file {
+                // Store the current index to try to maintain position after refresh
+                let old_index = self.picker_index;
+                let old_count = self.picker_items.len();
+
                 self.load_picker_dir(self.picker_dir.clone())?;
+
+                // Adjust index if items were removed
+                if self.picker_items.len() < old_count && old_index >= self.picker_items.len() {
+                    self.picker_index = self.picker_items.len().saturating_sub(1);
+                } else if old_index < self.picker_items.len() {
+                    self.picker_index = old_index;
+                }
             } else {
                 self.refresh_tree()?;
             }
