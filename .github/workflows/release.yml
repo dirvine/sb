@@ -169,6 +169,12 @@ jobs:
       - name: Install cargo-deb
         run: cargo install cargo-deb
       
+      - name: Add target
+        run: rustup target add x86_64-unknown-linux-gnu
+      
+      - name: Build binary for Debian
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+      
       - name: Build .deb package
         run: cargo deb --no-build --target x86_64-unknown-linux-gnu
       
