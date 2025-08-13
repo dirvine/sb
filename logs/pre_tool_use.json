@@ -8831,5 +8831,72 @@
       "command": "git add -A",
       "description": "Stage all changes"
     }
+  },
+  {
+    "session_id": "7d155162-0529-437e-88fd-de7c0db84336",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/7d155162-0529-437e-88fd-de7c0db84336.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git commit -m \"chore: update session logs\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\"",
+      "description": "Commit session log updates"
+    }
+  },
+  {
+    "session_id": "7d155162-0529-437e-88fd-de7c0db84336",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/7d155162-0529-437e-88fd-de7c0db84336.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "Cargo.toml",
+      "old_string": "version = \"0.3.4\"",
+      "new_string": "version = \"0.3.5\""
+    }
+  },
+  {
+    "session_id": "7d155162-0529-437e-88fd-de7c0db84336",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/7d155162-0529-437e-88fd-de7c0db84336.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git add Cargo.toml && git commit -m \"chore: Bump version to 0.3.5 for crates.io release\n\nAll CI failures have been resolved:\n- Fixed clippy warnings throughout codebase\n- Updated MSRV to 1.82.0 for dependency compatibility  \n- Configured proper deny.toml for cargo-deny checks\n- All test suites pass on Windows, macOS, and Ubuntu\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\"",
+      "description": "Commit version bump"
+    }
+  },
+  {
+    "session_id": "7d155162-0529-437e-88fd-de7c0db84336",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/7d155162-0529-437e-88fd-de7c0db84336.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git push",
+      "description": "Push commits to GitHub"
+    }
+  },
+  {
+    "session_id": "7d155162-0529-437e-88fd-de7c0db84336",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/7d155162-0529-437e-88fd-de7c0db84336.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "cargo publish --dry-run",
+      "description": "Dry run cargo publish to check for issues"
+    }
+  },
+  {
+    "session_id": "7d155162-0529-437e-88fd-de7c0db84336",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/7d155162-0529-437e-88fd-de7c0db84336.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git add -A && git commit -m \"chore: Update Cargo.lock for v0.3.5\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\"",
+      "description": "Commit Cargo.lock and remaining changes"
+    }
   }
 ]
