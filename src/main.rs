@@ -204,6 +204,7 @@ fn run(app: &mut App) -> Result<()> {
                         }
                         continue;
                     }
+                    // Handle delete confirmation modal
                     if app.confirming_delete {
                         match k.code {
                             KeyCode::Enter | KeyCode::Char('d') => {

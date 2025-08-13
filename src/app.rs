@@ -696,8 +696,12 @@ impl App {
                 );
             }
 
-            // Refresh the picker
-            self.load_picker_dir(self.picker_dir.clone())?;
+            // Refresh the UI - picker if in picker mode, otherwise main tree
+            if self.picking_file {
+                self.load_picker_dir(self.picker_dir.clone())?;
+            } else {
+                self.refresh_tree()?;
+            }
             self.refresh_git_status();
         }
         self.confirming_delete = false;

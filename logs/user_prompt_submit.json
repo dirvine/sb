@@ -180,5 +180,26 @@
     "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
     "hook_event_name": "UserPromptSubmit",
     "prompt": "/fix:ci "
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/fix:ci "
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "when I press d for delete I get teh modl window but pressing enter does nto delete the file "
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/commit and publsih to crates.io"
   }
 ]

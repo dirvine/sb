@@ -131,5 +131,19 @@
     "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
     "hook_event_name": "Notification",
     "message": "Claude is waiting for your input"
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "Notification",
+    "message": "Claude is waiting for your input"
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "Notification",
+    "message": "Claude is waiting for your input"
   }
 ]
