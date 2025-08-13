@@ -1,52 +1,49 @@
 # cargo-deny configuration
+# This template was adapted from https://github.com/EmbarkStudios/cargo-deny/blob/main/deny.template.toml
+
+[graph]
+# When creating the dependency graph used as the source of truth when checks are
+# executed, this field can be used to prune crates from the graph, removing them
+# from the view of cargo-deny. This is an extremely heavy hammer, as if a crate
+# is pruned from the graph, all of its dependencies will also be pruned unless
+# they are connected to another crate in the graph that hasn't been pruned,
+# so it should be used with care. The identifiers are [Package ID Specifications]
+# (https://doc.rust-lang.org/cargo/reference/pkgid-spec.html)
+#exclude = []
 
 [licenses]
+# See https://spdx.org/licenses/ for list of possible licenses
+# [possible values: any SPDX 3.11 short identifier (+ optional exception)].
+
 # List of explicitly allowed licenses
 allow = [
     "MIT",
     "Apache-2.0",
     "Apache-2.0 WITH LLVM-exception",
-    "BSD-2-Clause", 
+    "BSD-2-Clause",
     "BSD-3-Clause",
     "ISC",
     "Unicode-DFS-2016",
     "Unicode-3.0",
     "CC0-1.0",
     "Unlicense",
+    "Zlib",
 ]
-# Deny unlicensed dependencies
-unlicensed = "deny"
-# Warn about copyleft licenses
-copyleft = "warn"
 
 [bans]
 # Lint level for when multiple versions of the same dependency are detected
 multiple-versions = "warn"
 # Allow wildcard dependencies
 wildcards = "allow"
-# Highlight all duplicate dependencies
+# The graph highlighting used when creating dotgraphs for crates
+# with multiple versions
+# * lowest-version - The path to the lowest versioned duplicate is highlighted
+# * simplest-path - The path to the version with the fewest edges is highlighted
+# * all - Both lowest-version and simplest-path are used
 highlight = "all"
 
-[advisories]
-# Path to the advisory database
-db-path = "~/.cargo/advisory-db"
-# URL(s) to the advisory database
-db-urls = ["https://github.com/rustsec/advisory-db"]
-# Deny crates with security vulnerabilities
-vulnerability = "deny"
-# Warn for unmaintained crates
-unmaintained = "warn"
-# Warn for crates that have been yanked from crates.io
-yanked = "warn"
-# Warn about informational notices
-notice = "warn"
-# Ignore specific advisories
-ignore = []
-
 [sources]
-# Warn about unknown registries
+# Lint level for what to happen when a crate from a crate registry that is not in the allow list is encountered
 unknown-registry = "warn"
-# Warn about unknown git sources
+# Lint level for what to happen when a crate from a git repository that is not in the allow list is encountered
 unknown-git = "warn"
-# Allow git sources
-allow-git = []

@@ -89,5 +89,12 @@
     "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
     "hook_event_name": "Notification",
     "message": "Claude is waiting for your input"
+  },
+  {
+    "session_id": "7d155162-0529-437e-88fd-de7c0db84336",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/7d155162-0529-437e-88fd-de7c0db84336.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "Notification",
+    "message": "Claude needs your permission to use Bash"
   }
 ]
