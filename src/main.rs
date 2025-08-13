@@ -175,6 +175,7 @@ fn run(app: &mut App) -> Result<()> {
                             (KeyCode::Esc, _) => {
                                 app.show_raw_editor = false;
                                 app.prefer_raw_editor = false;
+                                app.focus = Focus::Preview; // Ensure we're back in preview mode
                             }
                             (KeyCode::Tab, _) => {
                                 // Temporarily exit raw editor but remember preference
@@ -372,8 +373,14 @@ fn run(app: &mut App) -> Result<()> {
                         }
                         (KeyCode::Char('e'), _) => {
                             if matches!(app.focus, Focus::Preview) {
+                                app.focus = Focus::Editor;
                                 app.show_raw_editor = true;
                                 app.prefer_raw_editor = true;
+                                // Set editor cursor to match preview cursor position
+                                app.editor.move_cursor(tui_textarea::CursorMove::Jump(
+                                    app.preview_cursor as u16,
+                                    app.preview_col as u16,
+                                ));
                             }
                         }
                         (KeyCode::Up, _)

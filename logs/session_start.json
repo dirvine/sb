@@ -68,5 +68,26 @@
     "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
     "hook_event_name": "SessionStart",
     "source": "compact"
+  },
+  {
+    "session_id": "f0accd8f-1fdf-46e3-80be-637e03488b85",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/f0accd8f-1fdf-46e3-80be-637e03488b85.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "SessionStart",
+    "source": "startup"
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "SessionStart",
+    "source": "startup"
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "SessionStart",
+    "source": "compact"
   }
 ]

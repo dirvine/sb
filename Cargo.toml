@@ -79,6 +79,15 @@ lto = true
 opt-level = "z"
 strip = true
 
+# RPM package metadata
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/sb", dest = "/usr/bin/sb", mode = "755" },
+    { source = "README.md", dest = "/usr/share/doc/sb/README.md", doc = true },
+]
+summary = "Terminal Markdown Browser/Editor with Git integration"
+license = "MIT OR Apache-2.0"
+
 # Optional: cargo-dist for reproducible multi‑OS releases
 [workspace.metadata.dist]
 ci = ["github"]

@@ -117,5 +117,68 @@
     "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
     "hook_event_name": "UserPromptSubmit",
     "prompt": "/commit and patch bump and publish to crates.io"
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/commit and published to Cratestall Isle. "
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/commit and publish to crates.io "
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/prime "
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "In preview mode, when I press E to edit the file, it should edit it exactly where the cursor is rather than jumping to the beginning. "
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "Perfect. One other small issue:\n\nWhen we're in edit mode, we press escape, and it seems we've lost the cursor. It's not going back to preview mode; it's hidden. I have to press tab a couple of times.\n\nCan we check when we're in edit mode and we press escape that we're back in preview mode and preview mode has the focus? "
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/commit "
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "Excellent. Can we also do a patch release and publish to crates.io? "
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "publish also to crates.io "
+  },
+  {
+    "session_id": "4d9c9166-621c-40e0-95d9-b048758b35ee",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/4d9c9166-621c-40e0-95d9-b048758b35ee.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/fix:ci "
   }
 ]
