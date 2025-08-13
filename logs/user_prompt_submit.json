@@ -1,0 +1,79 @@
+[
+  {
+    "session_id": "cdaf4056-7714-426e-bdcc-571462091185",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/cdaf4056-7714-426e-bdcc-571462091185.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/prime "
+  },
+  {
+    "session_id": "cdaf4056-7714-426e-bdcc-571462091185",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/cdaf4056-7714-426e-bdcc-571462091185.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/help "
+  },
+  {
+    "session_id": "cdaf4056-7714-426e-bdcc-571462091185",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/cdaf4056-7714-426e-bdcc-571462091185.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/test "
+  },
+  {
+    "session_id": "cdaf4056-7714-426e-bdcc-571462091185",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/cdaf4056-7714-426e-bdcc-571462091185.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/dev:review "
+  },
+  {
+    "session_id": "2036c1e2-2e5b-464d-90f6-a9f1872e7874",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/2036c1e2-2e5b-464d-90f6-a9f1872e7874.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/orchestrate Code Review Report - Saorsa Browser v0.3.4\n\n  \u2705 Security Assessment\n\n  Strengths:\n  - Excellent path traversal protection in security.rs:\n    - Validates against ../, null bytes, absolute paths, hidden files\n    - Double-checks canonical paths stay within base directory\n    - Handles non-existent paths safely\n  - Resource protection: 10MB file limit, 1MB preview limit\n  - Error sanitization: Comprehensive regex patterns to redact sensitive data (paths, IPs, credentials, tokens)\n  - Input validation: All user inputs validated before processing\n\n  Minor Concerns:\n  - Two unmaintained dependencies flagged by cargo audit:\n    - paste (via ratatui) - unmaintained but no known vulnerabilities\n    - yaml-rust (via syntect) - unmaintained, consider migration path\n\n  \u26a1 Performance Analysis\n\n  Strengths:\n  - Efficient event loop: 200ms polling interval balances responsiveness and CPU usage\n  - Syntax highlighting cache: Uses once_cell::Lazy for one-time initialization\n  - Optimized release build: LTO, single codegen unit, size optimization (opt-level = \"z\")\n  - Smart rendering: Only redraws on events, not continuously\n\n  Areas for Improvement:\n  - Synchronous file tree building: Could block on large directories (noted in CLAUDE.md)\n  - No async file operations: Despite tokio dependency, file I/O is synchronous\n  - Missing directory cache: Mentioned in README but not implemented in current code\n\n  \ud83d\udcca Code Quality\n\n  Strengths:\n  - Clean separation of concerns: Distinct modules for app, preview, fs, git, security\n  - Comprehensive error handling: Uses Result<T> throughout, proper error propagation\n  - Terminal guard pattern: Ensures terminal restored even on panic (TermGuard in main.rs)\n  - Well-structured state machine: Clear focus states and operation modes\n\n  Improvements Needed:\n  - Large App struct: Could benefit from splitting into smaller components\n  - Event handling complexity: Deep nesting in main loop could be refactored\n  - Missing documentation: No doc comments on public APIs\n\n  \ud83e\uddea Test Coverage\n\n  Good:\n  - 59 test functions across 6 test modules\n  - Security tests: Path traversal, file size limits, sanitization\n  - Comprehensive dev dependencies: proptest, quickcheck for property testing\n  - Integration test tools: assert_fs, assert_cmd, predicates\n\n  Gaps:\n  - No coverage metrics: Consider adding tarpaulin or llvm-cov\n  - Missing UI tests: Terminal rendering not tested\n  - No benchmark tests: Despite criterion dependency\n\n  \ud83c\udfaf Best Practices\n\n  Following:\n  - Error types: Custom error enum with thiserror\n  - Modular architecture: Clear module boundaries\n  - Git integration: Proper use of git2 for status and diffs\n  - Cross-platform: Using crossterm for terminal abstraction\n\n  Missing:\n  - CI/CD configuration: No GitHub Actions workflow found\n  - Documentation: Limited inline documentation\n  - Async potential: Tokio included but underutilized\n\n  \ud83d\udccb Recommendations\n\n  1. Priority 1 - Security:\n    - Monitor/replace unmaintained dependencies\n    - Add security policy file (SECURITY.md)\n  2. Priority 2 - Performance:\n    - Implement async file operations using tokio\n    - Add directory caching as mentioned in README\n    - Consider lazy-loading large directory trees\n  3. Priority 3 - Quality:\n    - Add comprehensive doc comments\n    - Refactor main event loop for clarity\n    - Add code coverage reporting\n  4. Priority 4 - Testing:\n    - Add UI/rendering tests\n    - Implement performance benchmarks\n    - Add GitHub Actions CI workflow\n"
+  },
+  {
+    "session_id": "2036c1e2-2e5b-464d-90f6-a9f1872e7874",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/2036c1e2-2e5b-464d-90f6-a9f1872e7874.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "Spec approved. Please continue. "
+  },
+  {
+    "session_id": "2036c1e2-2e5b-464d-90f6-a9f1872e7874",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/2036c1e2-2e5b-464d-90f6-a9f1872e7874.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "Unfortunately, I see the file chooser, but I can't expand it or select any files. The file chooser looks frozen. Also, please let's not have any code warnings at all. If we've got unused code, remove it. "
+  },
+  {
+    "session_id": "2036c1e2-2e5b-464d-90f6-a9f1872e7874",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/2036c1e2-2e5b-464d-90f6-a9f1872e7874.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "That's better. I could open the file okay, but then nothing (I couldn't tab back to the \"file choose\" or scroll in the file). It also seems that we're not in preview mode, we're not showing rendered markdown\u2014it's as if we're just going into edit mode. Can you check all changes since the last commit? Because something's a bit wrong. "
+  },
+  {
+    "session_id": "2036c1e2-2e5b-464d-90f6-a9f1872e7874",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/2036c1e2-2e5b-464d-90f6-a9f1872e7874.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "our preview mode is no longer showing preview data, it shows raw data, so for markdown files it is not showing rendered markdown, it shows raw markdown, so we have done something wrong, also our navigation between preview and file chooser is broken "
+  },
+  {
+    "session_id": "2036c1e2-2e5b-464d-90f6-a9f1872e7874",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/2036c1e2-2e5b-464d-90f6-a9f1872e7874.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "Okay. Preview mode is not showing rendered Markdown. It still shows like # for heading and ## for subheading, etc. So it's not rendered. The work done since we last did a release has degraded the system. Can we go back to the last release version? It worked fine. I'm happy enough with it and disregard all the work we've done since then and just keep that last release version as the actual one we used. "
+  },
+  {
+    "session_id": "7d155162-0529-437e-88fd-de7c0db84336",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/7d155162-0529-437e-88fd-de7c0db84336.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/fix:ci "
+  }
+]

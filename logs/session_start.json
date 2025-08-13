@@ -1,0 +1,58 @@
+[
+  {
+    "session_id": "cdaf4056-7714-426e-bdcc-571462091185",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/cdaf4056-7714-426e-bdcc-571462091185.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "SessionStart",
+    "source": "startup"
+  },
+  {
+    "session_id": "2036c1e2-2e5b-464d-90f6-a9f1872e7874",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/2036c1e2-2e5b-464d-90f6-a9f1872e7874.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "SessionStart",
+    "source": "startup"
+  },
+  {
+    "session_id": "2036c1e2-2e5b-464d-90f6-a9f1872e7874",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/2036c1e2-2e5b-464d-90f6-a9f1872e7874.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "SessionStart",
+    "source": "compact"
+  },
+  {
+    "session_id": "2036c1e2-2e5b-464d-90f6-a9f1872e7874",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/2036c1e2-2e5b-464d-90f6-a9f1872e7874.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "SessionStart",
+    "source": "compact"
+  },
+  {
+    "session_id": "2036c1e2-2e5b-464d-90f6-a9f1872e7874",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/2036c1e2-2e5b-464d-90f6-a9f1872e7874.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "SessionStart",
+    "source": "compact"
+  },
+  {
+    "session_id": "2036c1e2-2e5b-464d-90f6-a9f1872e7874",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/2036c1e2-2e5b-464d-90f6-a9f1872e7874.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "SessionStart",
+    "source": "compact"
+  },
+  {
+    "session_id": "2036c1e2-2e5b-464d-90f6-a9f1872e7874",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/2036c1e2-2e5b-464d-90f6-a9f1872e7874.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "SessionStart",
+    "source": "compact"
+  },
+  {
+    "session_id": "7d155162-0529-437e-88fd-de7c0db84336",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/7d155162-0529-437e-88fd-de7c0db84336.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "SessionStart",
+    "source": "startup"
+  }
+]
