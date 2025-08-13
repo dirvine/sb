@@ -32,7 +32,7 @@ jobs:
           cargo audit
       
       - name: Upload audit report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: audit-report
           path: audit-report.json
@@ -75,7 +75,7 @@ jobs:
           cargo outdated --format json > outdated-report.json
       
       - name: Upload outdated report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: outdated-report
           path: outdated-report.json
@@ -181,7 +181,7 @@ jobs:
           cargo vet suggest > suggestions.txt
       
       - name: Upload supply chain artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: supply-chain-report
           path: |
