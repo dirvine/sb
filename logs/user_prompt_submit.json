@@ -103,5 +103,19 @@
     "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
     "hook_event_name": "UserPromptSubmit",
     "prompt": "Yes, I think we should remove that deny.tomo from the security workflow. "
+  },
+  {
+    "session_id": "7d155162-0529-437e-88fd-de7c0db84336",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/7d155162-0529-437e-88fd-de7c0db84336.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/commit "
+  },
+  {
+    "session_id": "7d155162-0529-437e-88fd-de7c0db84336",
+    "transcript_path": "/Users/davidirvine/.claude/projects/-Users-davidirvine-Desktop-Devel-projects-saorsa-browser/7d155162-0529-437e-88fd-de7c0db84336.jsonl",
+    "cwd": "/Users/davidirvine/Desktop/Devel/projects/saorsa-browser",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "/commit and patch bump and publish to crates.io"
   }
 ]
