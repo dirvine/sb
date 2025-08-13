@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+#[allow(dead_code)]
 pub fn resolve_link(current_file: &Path, link: &str) -> PathBuf {
     let p = std::path::Path::new(link);
     if p.is_absolute() {

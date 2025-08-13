@@ -1,5 +1,6 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use std::fs;
+use std::hint::black_box;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
@@ -23,38 +24,10 @@ fn benchmark_file_reading(c: &mut Criterion) {
     for size in [10, 50, 100].iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter(|| {
-                for i in 0..size {
-                    let content = fs::read_to_string(&files[i]).unwrap();
+                for file in files.iter().take(size) {
+                    let content = fs::read_to_string(file).unwrap();
                     black_box(content);
                 }
-            });
-        });
-    }
-
-    group.finish();
-}
-
-fn benchmark_markdown_parsing(c: &mut Criterion) {
-    use pulldown_cmark::{Options, Parser};
-
-    let markdown_samples = vec![
-        ("small", "# Title\n\nParagraph"),
-        ("medium", include_str!("../README.md")),
-        ("large", &"# Large Document\n\n".repeat(1000)),
-    ];
-
-    let mut group = c.benchmark_group("markdown_parsing");
-
-    for (name, content) in markdown_samples {
-        group.bench_with_input(BenchmarkId::from_parameter(name), &content, |b, content| {
-            b.iter(|| {
-                let mut options = Options::empty();
-                options.insert(Options::ENABLE_STRIKETHROUGH);
-                options.insert(Options::ENABLE_TABLES);
-
-                let parser = Parser::new_ext(content, options);
-                let events: Vec<_> = parser.collect();
-                black_box(events);
             });
         });
     }
@@ -136,6 +109,7 @@ fn benchmark_cache_operations(c: &mut Criterion) {
     use std::collections::HashMap;
     use std::time::Instant;
 
+    #[allow(dead_code)]
     struct CacheEntry {
         data: String,
         timestamp: Instant,
@@ -216,7 +190,6 @@ fn benchmark_string_operations(c: &mut Criterion) {
 criterion_group!(
     benches,
     benchmark_file_reading,
-    benchmark_markdown_parsing,
     benchmark_syntax_highlighting,
     benchmark_directory_traversal,
     benchmark_cache_operations,

@@ -419,7 +419,7 @@ dependencies = [
  "crossterm_winapi",
  "derive_more",
  "document-features",
- "mio 1.0.4",
+ "mio",
  "parking_lot",
  "rustix 1.0.8",
  "signal-hook",

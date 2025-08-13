@@ -19,7 +19,6 @@ use std::{
 };
 use tui_textarea::TextArea;
 use tui_tree_widget::{TreeItem, TreeState};
-use walkdir::DirEntry;
 
 // Vim mode removed — keep simple preview editing
 
@@ -39,6 +38,7 @@ pub enum OpMode {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct FileNode {
     pub path: PathBuf,
     pub label: String,
@@ -88,7 +88,9 @@ pub struct App {
     pub preview_col: usize,
     pub preview_scroll: usize,
     pub preview_viewport: usize,
+    #[allow(dead_code)]
     pub undo_stack: Vec<Vec<String>>,
+    #[allow(dead_code)]
     pub redo_stack: Vec<Vec<String>>,
     pub autoplay_video: bool,
     // Video playback
@@ -268,11 +270,13 @@ impl App {
         Ok(())
     }
 
-    fn push_undo(&mut self, lines: &Vec<String>) {
-        self.undo_stack.push(lines.clone());
+    #[allow(dead_code)]
+    fn push_undo(&mut self, lines: &[String]) {
+        self.undo_stack.push(lines.to_vec());
         self.redo_stack.clear();
     }
 
+    #[allow(dead_code)]
     fn save_lines(&mut self, lines: Vec<String>) {
         self.editor = TextArea::from(lines.clone());
         if let Some(path) = &self.opened {
@@ -280,6 +284,7 @@ impl App {
         }
     }
 
+    #[allow(dead_code)]
     pub fn insert_char_preview(&mut self, ch: char) {
         if self.preview_cursor >= self.editor.lines().len() {
             return;
@@ -289,14 +294,12 @@ impl App {
         let line = &mut lines[self.preview_cursor];
         let mut s = String::with_capacity(line.len() + 1);
         let mut idx = 0usize;
-        let mut count = 0usize;
-        for c in line.chars() {
+        for (count, c) in line.chars().enumerate() {
             if count == self.preview_col {
                 break;
             }
             s.push(c);
             idx += c.len_utf8();
-            count += 1;
         }
         s.push(ch);
         s.push_str(&line[idx..]);
@@ -305,6 +308,7 @@ impl App {
         self.save_lines(lines);
     }
 
+    #[allow(dead_code)]
     pub fn backspace_preview(&mut self) {
         if self.preview_cursor >= self.editor.lines().len() {
             return;
@@ -317,14 +321,12 @@ impl App {
         }
         let mut out = String::with_capacity(line.len());
         let mut idx = 0usize;
-        let mut count = 0usize;
-        for c in line.chars() {
+        for (count, c) in line.chars().enumerate() {
             if count + 1 == self.preview_col {
                 break;
             }
             out.push(c);
             idx += c.len_utf8();
-            count += 1;
         }
         let mut skip_idx = idx;
         if let Some(c) = line[idx..].chars().next() {
@@ -336,18 +338,17 @@ impl App {
         self.save_lines(lines);
     }
 
+    #[allow(dead_code)]
     pub fn insert_newline_preview(&mut self) {
         let mut lines = self.editor.lines().to_vec();
         self.push_undo(&lines);
         let line = &mut lines[self.preview_cursor];
         let mut split_idx = 0usize;
-        let mut count = 0usize;
-        for c in line.chars() {
+        for (count, c) in line.chars().enumerate() {
             if count == self.preview_col {
                 break;
             }
             split_idx += c.len_utf8();
-            count += 1;
         }
         let right = line[split_idx..].to_string();
         line.truncate(split_idx);
@@ -358,6 +359,7 @@ impl App {
         self.save_lines(lines);
     }
 
+    #[allow(dead_code)]
     pub fn insert_newline_above_preview(&mut self) {
         let mut lines = self.editor.lines().to_vec();
         self.push_undo(&lines);
@@ -455,6 +457,7 @@ impl App {
         self.delete_target = None;
     }
 
+    #[allow(dead_code)]
     pub fn confirm_delete(&mut self) -> Result<()> {
         if let Some(path) = self.delete_target.clone() {
             if path.is_dir() {
@@ -976,6 +979,7 @@ impl App {
     }
 
     // --- Inline editing in Preview ----------------------------------------
+    #[allow(dead_code)]
     pub fn begin_line_edit(&mut self) {
         if self.preview_cursor >= self.editor.lines().len() {
             return;
@@ -1041,6 +1045,7 @@ impl App {
     }
 
     // Line operations (simple)
+    #[allow(dead_code)]
     pub fn delete_current_line(&mut self) {
         let mut lines = self.editor.lines().to_vec();
         if self.preview_cursor < lines.len() {
@@ -1054,14 +1059,17 @@ impl App {
     }
 
     // Column and word motions
+    #[allow(dead_code)]
     pub fn move_col_to_start(&mut self) {
         self.preview_col = 0;
     }
+    #[allow(dead_code)]
     pub fn move_col_to_end(&mut self) {
         if let Some(line) = self.editor.lines().get(self.preview_cursor) {
             self.preview_col = line.chars().count();
         }
     }
+    #[allow(dead_code)]
     pub fn move_word_forward(&mut self) {
         if let Some(line) = self.editor.lines().get(self.preview_cursor) {
             let cs: Vec<char> = line.chars().collect();
@@ -1086,6 +1094,7 @@ impl App {
             self.preview_col = i.min(len);
         }
     }
+    #[allow(dead_code)]
     pub fn move_word_back(&mut self) {
         if let Some(line) = self.editor.lines().get(self.preview_cursor) {
             let cs: Vec<char> = line.chars().collect();
@@ -1125,6 +1134,7 @@ impl App {
             }
         }
     }
+    #[allow(dead_code)]
     pub fn delete_char_under(&mut self) {
         if self.preview_cursor >= self.editor.lines().len() {
             return;
@@ -1138,14 +1148,12 @@ impl App {
         let line = &mut lines[self.preview_cursor];
         let mut out = String::with_capacity(line.len());
         let mut idx = 0usize;
-        let mut count = 0usize;
-        for c in line.chars() {
+        for (count, c) in line.chars().enumerate() {
             if count == self.preview_col {
                 break;
             }
             out.push(c);
             idx += c.len_utf8();
-            count += 1;
         }
         let mut skip_idx = idx;
         if let Some(c) = line[idx..].chars().next() {
@@ -1155,9 +1163,11 @@ impl App {
         *line = out;
         self.save_lines(lines);
     }
+    #[allow(dead_code)]
     pub fn delete_char_before(&mut self) {
         self.backspace_preview();
     }
+    #[allow(dead_code)]
     pub fn undo(&mut self) {
         if let Some(prev) = self.undo_stack.pop() {
             let current = self.editor.lines().to_vec();
@@ -1165,6 +1175,7 @@ impl App {
             self.save_lines(prev);
         }
     }
+    #[allow(dead_code)]
     pub fn redo(&mut self) {
         if let Some(next) = self.redo_stack.pop() {
             let current = self.editor.lines().to_vec();
@@ -1306,10 +1317,6 @@ impl VideoPlayer {
 }
 
 // --- Tree helpers -----------------------------------------------------------
-
-fn is_hidden(entry: &DirEntry) -> bool {
-    entry.file_name().to_string_lossy().starts_with('.')
-}
 
 fn build_tree(root: &Path) -> Result<Vec<TreeItem<'static, String>>> {
     fn build_node(dir: &Path) -> TreeItem<'static, String> {

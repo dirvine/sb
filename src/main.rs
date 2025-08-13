@@ -3,7 +3,7 @@ use std::io::{self};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use crossterm::{
+use ratatui::crossterm::{
     event::{
         self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers,
         MouseEventKind,
@@ -25,9 +25,9 @@ mod git;
 struct TermGuard;
 impl Drop for TermGuard {
     fn drop(&mut self) {
-        let _ = crossterm::terminal::disable_raw_mode();
+        let _ = disable_raw_mode();
         let mut stdout = std::io::stdout();
-        let _ = crossterm::execute!(stdout, LeaveAlternateScreen, DisableMouseCapture);
+        let _ = execute!(stdout, LeaveAlternateScreen, DisableMouseCapture);
     }
 }
 
@@ -603,11 +603,7 @@ fn ui(f: &mut Frame, app: &mut App) {
         }
     }
     // Set preview viewport height (usable rows for text block)
-    let preview_text_rows = if app.show_left_pane {
-        chunks[1].height.saturating_sub(2)
-    } else {
-        chunks[1].height.saturating_sub(2)
-    } as usize;
+    let preview_text_rows = chunks[1].height.saturating_sub(2) as usize;
     app.preview_viewport = preview_text_rows;
     // Clamp scroll to valid range against file length
     let total_lines = app.editor.lines().len();

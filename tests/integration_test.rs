@@ -157,8 +157,7 @@ fn test_config_defaults() {
     let _config = Config::default();
 
     // Test config creation works (specific method tests depend on actual implementation)
-    // Just test that the config can be created successfully
-    assert!(true); // Config creation succeeded if we get here
+    // Config creation succeeded if we get here
 }
 
 #[test]
@@ -202,7 +201,6 @@ fn test_app_focus_management() {
 
     // App should start with some focus
     // We can't predict the exact value, so just test it compiles
-    assert!(true);
 }
 
 #[test]

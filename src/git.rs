@@ -8,16 +8,18 @@ use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 pub enum GitError {
     #[error("Git repository not found")]
     NotARepository,
     #[error("Git error: {0}")]
-    GitError(#[from] git2::Error),
+    Git(#[from] git2::Error),
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum FileStatus {
     Unmodified,
     Added,
@@ -71,13 +73,14 @@ impl GitRepository {
         let repo = Repository::discover(path.as_ref())?;
         let root = repo
             .workdir()
-            .ok_or_else(|| GitError::GitError(git2::Error::from_str("No working directory")))?
+            .ok_or_else(|| GitError::Git(git2::Error::from_str("No working directory")))?
             .to_path_buf();
 
         Ok(GitRepository { repo, root })
     }
 
     /// Check if a path is within a Git repository
+    #[allow(dead_code)]
     pub fn is_git_repo<P: AsRef<Path>>(path: P) -> bool {
         Repository::discover(path.as_ref()).is_ok()
     }
@@ -114,11 +117,12 @@ impl GitRepository {
     }
 
     /// Get the status of a specific file
+    #[allow(dead_code)]
     pub fn file_status<P: AsRef<Path>>(&self, path: P) -> Result<FileStatus, GitError> {
         let relative_path = path
             .as_ref()
             .strip_prefix(&self.root)
-            .map_err(|_| GitError::GitError(git2::Error::from_str("Path not in repository")))?;
+            .map_err(|_| GitError::Git(git2::Error::from_str("Path not in repository")))?;
 
         let status = self.repo.status_file(relative_path)?;
         Ok(FileStatus::from(status))
@@ -129,7 +133,7 @@ impl GitRepository {
         let relative_path = path
             .as_ref()
             .strip_prefix(&self.root)
-            .map_err(|_| GitError::GitError(git2::Error::from_str("Path not in repository")))?;
+            .map_err(|_| GitError::Git(git2::Error::from_str("Path not in repository")))?;
 
         // Get the diff between the working directory and the index
         let mut diff_opts = git2::DiffOptions::new();
@@ -229,7 +233,7 @@ impl GitRepository {
         let relative_path = path
             .as_ref()
             .strip_prefix(&self.root)
-            .map_err(|_| GitError::GitError(git2::Error::from_str("Path not in repository")))?;
+            .map_err(|_| GitError::Git(git2::Error::from_str("Path not in repository")))?;
 
         let mut index = self.repo.index()?;
         index.remove_path(relative_path)?;
@@ -245,12 +249,13 @@ impl GitRepository {
 
     /// Move a file using Git (git mv)
     pub fn move_file<P: AsRef<Path>>(&self, from: P, to: P) -> Result<(), GitError> {
-        let from_relative = from.as_ref().strip_prefix(&self.root).map_err(|_| {
-            GitError::GitError(git2::Error::from_str("Source path not in repository"))
-        })?;
+        let from_relative = from
+            .as_ref()
+            .strip_prefix(&self.root)
+            .map_err(|_| GitError::Git(git2::Error::from_str("Source path not in repository")))?;
 
         let to_relative = to.as_ref().strip_prefix(&self.root).map_err(|_| {
-            GitError::GitError(git2::Error::from_str("Destination path not in repository"))
+            GitError::Git(git2::Error::from_str("Destination path not in repository"))
         })?;
 
         // Move the file in the filesystem first
@@ -269,7 +274,6 @@ impl GitRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
     use tempfile::TempDir;
 
     #[test]
