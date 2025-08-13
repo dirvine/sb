@@ -43,7 +43,7 @@ tui-markdown = "0.3"
 
 # Filesystem utilities
 walkdir = "2"
-notify = "6"
+notify = "8"
 pathdiff = "0.2"
 
 # Open files/URLs in the OS default app (images/video/etc.)
