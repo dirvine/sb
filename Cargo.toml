@@ -1,6 +1,6 @@
 [package]
 name = "sb"
-version = "0.3.7"
+version = "0.3.8"
 edition = "2021"
 authors = ["David Irvine <david.irvine@maidsafe.net>"]
 description = "Terminal Markdown Browser/Editor with Git integration, syntax highlighting, and media support"

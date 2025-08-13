@@ -65,6 +65,7 @@ jobs:
     needs: create-release
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -72,25 +73,10 @@ jobs:
             binary_name: sb
             asset_name: sb-linux-amd64
           
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            binary_name: sb
-            asset_name: sb-linux-arm64
-          
           - os: macos-latest
             target: x86_64-apple-darwin
             binary_name: sb
             asset_name: sb-macos-amd64
-          
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            binary_name: sb
-            asset_name: sb-macos-arm64
-          
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            binary_name: sb.exe
-            asset_name: sb-windows-amd64.exe
     
     steps:
       - uses: actions/checkout@v4
@@ -100,42 +86,20 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       
-      - name: Install cross-compilation tools (Linux ARM64)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-      
       - name: Build binary
-        run: |
-          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
-            export CC=aarch64-linux-gnu-gcc
-            export AR=aarch64-linux-gnu-ar
-          fi
-          cargo build --release --target ${{ matrix.target }} --all-features
+        run: cargo build --release --target ${{ matrix.target }}
         shell: bash
       
-      - name: Strip binary (Linux/macOS)
-        if: matrix.os != 'windows-latest'
-        run: |
-          if [ "${{ matrix.os }}" = "ubuntu-latest" ] && [ "${{ matrix.target }}" != "aarch64-unknown-linux-gnu" ]; then
-            strip target/${{ matrix.target }}/release/${{ matrix.binary_name }}
-          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            strip target/${{ matrix.target }}/release/${{ matrix.binary_name }}
-          fi
+      - name: Strip binary
+        run: strip target/${{ matrix.target }}/release/${{ matrix.binary_name }}
       
       - name: Create archive
         run: |
           cd target/${{ matrix.target }}/release
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            7z a ../../../${{ matrix.asset_name }}.zip ${{ matrix.binary_name }}
-          else
-            tar czf ../../../${{ matrix.asset_name }}.tar.gz ${{ matrix.binary_name }}
-          fi
+          tar czf ../../../${{ matrix.asset_name }}.tar.gz ${{ matrix.binary_name }}
         shell: bash
       
-      - name: Upload binary to release (tar.gz)
-        if: matrix.os != 'windows-latest'
+      - name: Upload binary to release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -144,91 +108,4 @@ jobs:
           asset_path: ./${{ matrix.asset_name }}.tar.gz
           asset_name: ${{ matrix.asset_name }}.tar.gz
           asset_content_type: application/gzip
-      
-      - name: Upload binary to release (zip)
-        if: matrix.os == 'windows-latest'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./${{ matrix.asset_name }}.zip
-          asset_name: ${{ matrix.asset_name }}.zip
-          asset_content_type: application/zip
 
-  build-deb-package:
-    name: Build Debian Package
-    needs: create-release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Install cargo-deb
-        run: cargo install cargo-deb
-      
-      - name: Add target
-        run: rustup target add x86_64-unknown-linux-gnu
-      
-      - name: Build binary for Debian
-        run: cargo build --release --target x86_64-unknown-linux-gnu
-      
-      - name: Build .deb package
-        run: |
-          # Check if binary exists
-          ls -la target/x86_64-unknown-linux-gnu/release/
-          cargo deb --no-build --target x86_64-unknown-linux-gnu
-      
-      - name: Upload .deb to release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./target/debian/sb_${{ needs.create-release.outputs.version }}_amd64.deb
-          asset_name: sb_${{ needs.create-release.outputs.version }}_amd64.deb
-          asset_content_type: application/vnd.debian.binary-package
-
-  build-rpm-package:
-    name: Build RPM Package
-    needs: create-release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Install cargo-generate-rpm
-        run: cargo install cargo-generate-rpm
-      
-      - name: Build binary
-        run: cargo build --release --all-features
-      
-      - name: Generate RPM
-        run: cargo generate-rpm
-      
-      - name: Upload .rpm to release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./target/generate-rpm/sb-${{ needs.create-release.outputs.version }}-1.x86_64.rpm
-          asset_name: sb-${{ needs.create-release.outputs.version }}-1.x86_64.rpm
-          asset_content_type: application/x-rpm
-
-  publish-homebrew:
-    name: Update Homebrew Formula
-    needs: [create-release, build-binaries]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Update Homebrew formula
-        run: |
-          echo "Homebrew formula update would go here"
-          echo "This typically involves:"
-          echo "1. Calculating SHA256 of the macOS binaries"
-          echo "2. Updating the formula in a homebrew tap repository"
-          echo "3. Creating a PR to the tap"
