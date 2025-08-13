@@ -58,6 +58,7 @@ pub struct App {
     pub left_state: TreeState<String>,
     pub editor: TextArea<'static>,
     pub opened: Option<PathBuf>,
+    pub last_saved_text: Option<String>,
     pub status: String,
     pub show_help: bool,
     pub show_left_pane: bool,
@@ -139,6 +140,7 @@ impl App {
             left_state,
             editor,
             opened: None,
+            last_saved_text: None,
             status: "Ready".into(),
             show_help: false,
             show_left_pane: true,
@@ -189,6 +191,7 @@ impl App {
                 fs::read_to_string(&path).with_context(|| format!("Reading {}", path.display()))?;
             self.editor = TextArea::from(text.lines().map(|s| s.to_string()).collect::<Vec<_>>());
             self.opened = Some(path);
+            self.last_saved_text = Some(text);
             self.status = "File opened".into();
             self.focus = Focus::Preview;
         }
@@ -212,6 +215,7 @@ impl App {
         if let Some(path) = &self.opened {
             let text = self.editor.lines().join("\n");
             fs::write(path, text).with_context(|| format!("Saving {}", path.display()))?;
+            self.last_saved_text = Some(self.editor.lines().join("\n"));
             self.status = "Saved".into();
         }
         Ok(())
@@ -423,6 +427,7 @@ impl App {
         fs::write(&new_path, &initial)?;
         self.opened = Some(new_path.clone());
         self.editor = TextArea::from(initial.lines().map(|s| s.to_string()).collect::<Vec<_>>());
+        self.last_saved_text = Some(initial);
         self.creating_file = false;
         self.refresh_tree()?;
         // Select the new file in the left tree
@@ -852,6 +857,15 @@ impl App {
 
     /// Check if file preview should show diff
     pub fn should_show_diff(&self, path: &Path) -> bool {
+        // Never auto-diff Markdown; keep normal rendered preview for .md files
+        if path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.eq_ignore_ascii_case("md") || e.eq_ignore_ascii_case("markdown"))
+            .unwrap_or(false)
+        {
+            return false;
+        }
         if let Some(status) = self.get_file_git_status(path) {
             matches!(status, FileStatus::Modified | FileStatus::Added)
         } else {
@@ -1121,11 +1135,6 @@ impl App {
         }
     }
 
-    pub fn move_col_left(&mut self) {
-        if self.preview_col > 0 {
-            self.preview_col -= 1;
-        }
-    }
     pub fn move_col_right(&mut self) {
         if let Some(line) = self.editor.lines().get(self.preview_cursor) {
             let len = line.chars().count();

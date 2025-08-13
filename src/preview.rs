@@ -23,7 +23,8 @@ impl Preview {
         let normalized = normalize_headings(src);
         // Convert markdown → styled Text, then take an owned copy (no unsafe lifetime tricks)
         let text_parsed: Text<'_> = md::from_str(&normalized);
-        let text: Text<'static> = to_owned_text(text_parsed);
+        let text_owned: Text<'static> = to_owned_text(text_parsed);
+        let text: Text<'static> = apply_heading_styles(text_owned);
 
         let mut images = vec![];
         for (_alt, p) in find_md_images(src) {
@@ -56,6 +57,60 @@ fn to_owned_text(input: Text<'_>) -> Text<'static> {
         out_lines.push(Line::from(spans_owned));
     }
     Text::from(out_lines)
+}
+
+fn apply_heading_styles(text: Text<'static>) -> Text<'static> {
+    // Convert leading "# ", "## ", ... into styled heading lines without the markers.
+    // This compensates for markdown backends that leave '#' in plain text.
+    let is_light = std::env::var("SB_THEME")
+        .ok()
+        .map(|v| v.eq_ignore_ascii_case("light"))
+        .unwrap_or(false);
+    let mut new_lines: Vec<Line<'static>> = Vec::with_capacity(text.lines.len());
+    for line in text.lines.into_iter() {
+        // Reconstruct full content to detect heading markers
+        let content: String = line
+            .spans
+            .iter()
+            .map(|s| s.content.clone().into_owned())
+            .collect();
+        let trimmed = content.trim_end_matches('\n');
+        // Count leading '#'
+        let mut hashes = 0usize;
+        for ch in trimmed.chars() {
+            if ch == '#' && hashes < 6 {
+                hashes += 1;
+            } else {
+                break;
+            }
+        }
+        let is_heading = hashes > 0 && trimmed.chars().nth(hashes) == Some(' ');
+        if is_heading {
+            let title = trimmed[hashes + 1..].to_string();
+            // Color scheme without bold/underline
+            // Light: H1/H2 Blue, H3 DarkGray, others Gray
+            // Dark: H1/H2 Yellow, H3 Cyan, others Cyan
+            let style = if is_light {
+                match hashes {
+                    1 => Style::default().fg(Color::Blue),
+                    2 => Style::default().fg(Color::Blue),
+                    3 => Style::default().fg(Color::DarkGray),
+                    _ => Style::default().fg(Color::Gray),
+                }
+            } else {
+                match hashes {
+                    1 => Style::default().fg(Color::Yellow),
+                    2 => Style::default().fg(Color::Yellow),
+                    3 => Style::default().fg(Color::Cyan),
+                    _ => Style::default().fg(Color::Cyan),
+                }
+            };
+            new_lines.push(Line::from(Span::styled(title, style)));
+        } else {
+            new_lines.push(line);
+        }
+    }
+    Text::from(new_lines)
 }
 
 pub fn resolve_relative(base_file: &Path, rel: &str) -> PathBuf {
@@ -141,8 +196,8 @@ pub fn render_preview(f: &mut Frame, area: Rect, preview: &Preview) {
         return;
     }
     // Determine if we should overlay raw current line and dim rendered output
-    let overlay_cursor_env = std::env::var("SB_PREVIEW_CURSOR").ok();
-    let show_overlay = overlay_cursor_env.is_some();
+    // Show raw-line overlay only when explicitly enabled (e.g., during inline edit)
+    let show_overlay = matches!(std::env::var("SB_OVERLAY").as_deref(), Ok("1"));
     // Text preview
     let mut paragraph = Paragraph::new(preview.text.clone())
         .wrap(Wrap { trim: true })
@@ -171,82 +226,117 @@ pub fn render_preview(f: &mut Frame, area: Rect, preview: &Preview) {
     let paragraph = paragraph.scroll((scroll_top, 0));
     f.render_widget(paragraph, chunks[0]);
 
-    // If env says we have a cursor line to show raw, overlay a single-line raw view with line number gutter
-    if let (Ok(raw_line), Ok(cursor_str)) = (
-        std::env::var("SB_CURRENT_TEXT"),
-        std::env::var("SB_PREVIEW_CURSOR"),
-    ) {
-        if let Ok(cursor) = cursor_str.parse::<usize>() {
-            let mut lines_iter = raw_line.lines();
-            if let Some(raw0) = lines_iter.nth(cursor) {
-                let raw = sanitize_line(raw0);
-                // draw on top: a one-line block showing the raw markdown of the focused line
-                let y = chunks[0].y + 1 + (cursor as u16).min(chunks[0].height.saturating_sub(2));
-                // Gutter with line number
-                let gutter_w: u16 = 6;
-                if chunks[0].width > gutter_w + 2 {
-                    let gutter_area = Rect {
-                        x: chunks[0].x + 1,
-                        y,
-                        width: gutter_w,
-                        height: 1,
-                    };
-                    let ln = format!("{:>4} ", cursor + 1);
-                    let gutter =
-                        Paragraph::new(ln).style(Style::default().fg(Color::White).bg(Color::Blue));
-                    f.render_widget(gutter, gutter_area);
-                    // Raw line area beside gutter
-                    let raw_area = Rect {
-                        x: gutter_area.x + gutter_area.width,
-                        y,
-                        width: chunks[0].width.saturating_sub(2 + gutter_w),
-                        height: 1,
-                    };
-                    let col = std::env::var("SB_PREVIEW_COL")
-                        .ok()
-                        .and_then(|s| s.parse::<usize>().ok())
-                        .unwrap_or(0);
-                    // Split raw into left of col, cursor char, and right for a visual caret block
-                    let chars: Vec<char> = raw.chars().collect();
-                    let col_idx = col.min(chars.len());
-                    let (left, cur, right) = (
-                        chars[..col_idx].iter().collect::<String>(),
-                        chars.get(col_idx).cloned(),
-                        if col_idx < chars.len() {
-                            chars[col_idx + 1..].iter().collect::<String>()
-                        } else {
-                            String::new()
-                        },
-                    );
-                    let mut spans = vec![Span::styled(
-                        left,
-                        Style::default().fg(Color::Black).bg(Color::Yellow),
-                    )];
-                    // Draw caret block on the current character or a block if at EOL
-                    if let Some(c) = cur {
-                        spans.push(Span::styled(
-                            c.to_string(),
-                            Style::default()
-                                .fg(Color::Black)
-                                .bg(Color::White)
-                                .add_modifier(Modifier::BOLD),
-                        ));
-                    } else {
-                        spans.push(Span::styled(
-                            " ",
-                            Style::default()
-                                .fg(Color::Black)
-                                .bg(Color::White)
-                                .add_modifier(Modifier::BOLD),
-                        ));
+    // Always show a visible cursor line highlight in the preview's inner area
+    if let Some(cursor) = std::env::var("SB_PREVIEW_CURSOR")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+    {
+        let inner_y = chunks[0].y.saturating_add(1);
+        let inner_x = chunks[0].x.saturating_add(1);
+        let inner_h = chunks[0].height.saturating_sub(2);
+        let inner_w = chunks[0].width.saturating_sub(2);
+        if inner_h > 0 && inner_w > 0 && cursor >= scroll_top as usize {
+            let rel = cursor - scroll_top as usize;
+            if (rel as u16) < inner_h {
+                let area = Rect {
+                    x: inner_x,
+                    y: inner_y + rel as u16,
+                    width: inner_w,
+                    height: 1,
+                };
+                let highlight = Paragraph::new("").style(Style::default().bg(Color::DarkGray));
+                f.render_widget(highlight, area);
+            }
+        }
+    }
+
+    // If enabled, overlay a single raw line with a caret and gutter
+    if show_overlay {
+        if let (Ok(raw_line), Ok(cursor_str)) = (
+            std::env::var("SB_CURRENT_TEXT"),
+            std::env::var("SB_PREVIEW_CURSOR"),
+        ) {
+            if let Ok(cursor) = cursor_str.parse::<usize>() {
+                let mut lines_iter = raw_line.lines();
+                if let Some(raw0) = lines_iter.nth(cursor) {
+                    let raw = sanitize_line(raw0);
+                    // draw on top: a one-line block showing the raw markdown of the focused line
+                    let inner_y = chunks[0].y.saturating_add(1);
+                    let inner_x = chunks[0].x.saturating_add(1);
+                    let inner_h = chunks[0].height.saturating_sub(2);
+                    let inner_w = chunks[0].width.saturating_sub(2);
+                    // place relative to scroll
+                    let rel = cursor.saturating_sub(scroll_top as usize) as u16;
+                    if rel >= inner_h {
+                        return;
                     }
-                    spans.push(Span::styled(
-                        right,
-                        Style::default().fg(Color::Black).bg(Color::Yellow),
-                    ));
-                    let styled = Line::from(spans);
-                    let para = Paragraph::new(styled).wrap(Wrap { trim: true });
-                    f.render_widget(para, raw_area);
+                    let y = inner_y + rel;
+                    // Gutter with line number
+                    let gutter_w: u16 = 6;
+                    if inner_w > gutter_w {
+                        let gutter_area = Rect {
+                            x: inner_x,
+                            y,
+                            width: gutter_w,
+                            height: 1,
+                        };
+                        let ln = format!("{:>4} ", cursor + 1);
+                        let gutter = Paragraph::new(ln)
+                            .style(Style::default().fg(Color::White).bg(Color::Blue));
+                        f.render_widget(gutter, gutter_area);
+                        // Raw line area beside gutter
+                        let raw_area = Rect {
+                            x: gutter_area.x + gutter_area.width,
+                            y,
+                            width: inner_w.saturating_sub(gutter_w),
+                            height: 1,
+                        };
+                        let col = std::env::var("SB_PREVIEW_COL")
+                            .ok()
+                            .and_then(|s| s.parse::<usize>().ok())
+                            .unwrap_or(0);
+                        // Split raw into left of col, cursor char, and right for a visual caret block
+                        let chars: Vec<char> = raw.chars().collect();
+                        let col_idx = col.min(chars.len());
+                        let (left, cur, right) = (
+                            chars[..col_idx].iter().collect::<String>(),
+                            chars.get(col_idx).cloned(),
+                            if col_idx < chars.len() {
+                                chars[col_idx + 1..].iter().collect::<String>()
+                            } else {
+                                String::new()
+                            },
+                        );
+                        let mut spans = vec![Span::styled(
+                            left,
+                            Style::default().fg(Color::Black).bg(Color::Yellow),
+                        )];
+                        // Draw caret block on the current character or a block if at EOL
+                        if let Some(c) = cur {
+                            spans.push(Span::styled(
+                                c.to_string(),
+                                Style::default()
+                                    .fg(Color::Black)
+                                    .bg(Color::White)
+                                    .add_modifier(Modifier::BOLD),
+                            ));
+                        } else {
+                            spans.push(Span::styled(
+                                " ",
+                                Style::default()
+                                    .fg(Color::Black)
+                                    .bg(Color::White)
+                                    .add_modifier(Modifier::BOLD),
+                            ));
+                        }
+                        spans.push(Span::styled(
+                            right,
+                            Style::default().fg(Color::Black).bg(Color::Yellow),
+                        ));
+                        let styled = Line::from(spans);
+                        let para = Paragraph::new(styled).wrap(Wrap { trim: true });
+                        f.render_widget(para, raw_area);
+                    }
                 }
             }
         }
@@ -333,7 +423,6 @@ fn try_render_code_preview(f: &mut Frame, area: Rect) -> Option<()> {
             | "scss"
             | "sass"
             | "sql"
-            | "md"
             | "tex"
     );
     if !is_code {

@@ -233,6 +233,8 @@ fn run(app: &mut App) -> Result<()> {
                                 // Tab between left pane and right pane (in whatever mode it's in)
                                 app.focus = match app.focus {
                                     Focus::Left => {
+                                        // Ensure selected file is opened before switching
+                                        let _ = app.open_selected();
                                         // Moving to right pane - decide which mode based on preference
                                         if app.prefer_raw_editor && app.opened.is_some() {
                                             Focus::Editor
@@ -246,14 +248,19 @@ fn run(app: &mut App) -> Result<()> {
                                 if matches!(app.focus, Focus::Editor) && app.prefer_raw_editor {
                                     app.show_raw_editor = true;
                                 }
+                            } else {
+                                // If left pane is hidden, Tab toggles it and focuses Files
+                                app.toggle_left_pane();
+                                app.focus = Focus::Left;
                             }
-                            // If left pane is hidden, Tab does nothing (only one pane visible)
                         }
                         (KeyCode::BackTab, _) => {
                             if app.show_left_pane {
                                 // BackTab between left pane and right pane (same as Tab since only 2 panes)
                                 app.focus = match app.focus {
                                     Focus::Left => {
+                                        // Ensure selected file is opened before switching
+                                        let _ = app.open_selected();
                                         // Moving to right pane - decide which mode based on preference
                                         if app.prefer_raw_editor && app.opened.is_some() {
                                             Focus::Editor
@@ -267,8 +274,11 @@ fn run(app: &mut App) -> Result<()> {
                                 if matches!(app.focus, Focus::Editor) && app.prefer_raw_editor {
                                     app.show_raw_editor = true;
                                 }
+                            } else {
+                                // If left pane is hidden, BackTab toggles it and focuses Files
+                                app.toggle_left_pane();
+                                app.focus = Focus::Left;
                             }
-                            // If left pane is hidden, BackTab does nothing (only one pane visible)
                         }
                         // 'p' previously toggled preview; now preview is always on, so ignore or repurpose later
                         (KeyCode::Char('?'), _) => app.toggle_help(),
@@ -394,7 +404,8 @@ fn run(app: &mut App) -> Result<()> {
                                         .unwrap_or(false);
 
                                     if is_file {
-                                        // If it's a file, switch to preview/editor pane
+                                        // If it's a file, open it and switch to preview/editor pane
+                                        let _ = app.open_selected();
                                         app.focus = if app.prefer_raw_editor && app.opened.is_some()
                                         {
                                             Focus::Editor
@@ -408,6 +419,35 @@ fn run(app: &mut App) -> Result<()> {
                                             app.show_raw_editor = true;
                                         }
                                     } else {
+                                        // If it's a directory, still allow switching right if it contains the opened file
+                                        if let Some(opened) = &app.opened {
+                                            if let Some(parent) = opened.parent() {
+                                                let sel_dir = app
+                                                    .left_state
+                                                    .selected()
+                                                    .last()
+                                                    .cloned()
+                                                    .unwrap_or_default();
+                                                if Path::new(&sel_dir) == parent {
+                                                    app.focus = if app.prefer_raw_editor
+                                                        && app.opened.is_some()
+                                                    {
+                                                        Focus::Editor
+                                                    } else {
+                                                        Focus::Preview
+                                                    };
+                                                    if matches!(app.focus, Focus::Editor)
+                                                        && app.prefer_raw_editor
+                                                    {
+                                                        app.show_raw_editor = true;
+                                                    }
+                                                    // Switch focus and skip expanding directory handling
+                                                    // by continuing the event loop
+                                                    // (no early return from run())
+                                                    // No-op; fall through to end of match arm
+                                                }
+                                            }
+                                        }
                                         // If it's a directory, try to expand it
                                         let _ = app.left_state.key_right();
                                     }
@@ -423,12 +463,16 @@ fn run(app: &mut App) -> Result<()> {
                                 KeyCode::Up | KeyCode::Char('k') => app.move_cursor_up(),
                                 KeyCode::Down | KeyCode::Char('j') => app.move_cursor_down(),
                                 KeyCode::Left => {
-                                    // In preview mode, left arrow switches to left pane if visible
-                                    if app.show_left_pane {
-                                        app.focus = Focus::Left;
-                                    } else {
-                                        app.move_col_left();
+                                    // Return focus to Files reliably
+                                    if !app.show_left_pane {
+                                        app.toggle_left_pane();
                                     }
+                                    // Keep tree selection in sync with currently opened file
+                                    if let Some(p) = &app.opened {
+                                        let _ =
+                                            app.left_state.select(vec![p.display().to_string()]);
+                                    }
+                                    app.focus = Focus::Left;
                                 }
                                 KeyCode::Right => {
                                     // In preview mode, right arrow just scrolls horizontally
@@ -558,6 +602,12 @@ fn ui(f: &mut Frame, app: &mut App) {
     if let Some(path) = app.opened.as_ref() {
         std::env::set_var("SB_CURRENT_FILE", path);
         std::env::set_var("SB_CURRENT_TEXT", &text);
+        // Only enable raw-line overlay when inline editing is active
+        if app.editing_line {
+            std::env::set_var("SB_OVERLAY", "1");
+        } else {
+            std::env::remove_var("SB_OVERLAY");
+        }
         std::env::set_var("SB_PREVIEW_CURSOR", app.preview_cursor.to_string());
         std::env::set_var("SB_PREVIEW_COL", app.preview_col.to_string());
         std::env::set_var("SB_PREVIEW_SCROLL", app.preview_scroll.to_string());
@@ -742,6 +792,27 @@ fn ui(f: &mut Frame, app: &mut App) {
     }
 
     // --- Status bar (context-sensitive)
+    // Compose filename and position details for status bar
+    let (file_label, pos_label, dirty_mark) = if let Some(p) = &app.opened {
+        let name = p
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("(no file)");
+        let line = app.preview_cursor + 1;
+        let col = app.preview_col + 1;
+        let dirty = match &app.last_saved_text {
+            Some(saved) => saved != &text,
+            None => false,
+        };
+        (
+            name.to_string(),
+            format!("L{} C{}", line, col),
+            if dirty { "*" } else { "" },
+        )
+    } else {
+        ("(no file)".to_string(), String::new(), "")
+    };
+
     let status_text = match (&app.focus, app.show_raw_editor, app.picking_file) {
         // File picker mode
         (_, _, true) => {
@@ -751,27 +822,27 @@ fn ui(f: &mut Frame, app: &mut App) {
         // Editor mode
         (Focus::Editor, true, false) | (_, true, false) if app.prefer_raw_editor => {
             format!(
-                "EDITOR MODE  │  Ctrl+S save  │  ESC return to preview  │  {}",
-                app.status
+                "EDITOR │ {}{} │ {} │ Ctrl+S save │ ESC preview │ {}",
+                file_label, dirty_mark, pos_label, app.status
             )
         }
         // Preview mode with focus
         (Focus::Preview, false, false) => {
             if app.show_left_pane {
                 format!(
-                    "PREVIEW MODE  │  ↑↓ scroll  ← files  e edit  Ctrl+S save  F2 picker  ? help  │  {}",
-                    app.status
+                    "PREVIEW │ {}{} │ {} │ ↑↓ scroll ← files e edit Ctrl+S save F2 picker ? help │ {}",
+                    file_label, dirty_mark, pos_label, app.status
                 )
             } else {
                 format!(
-                    "PREVIEW MODE  │  ↑↓ scroll  e edit  Ctrl+S save  F2 picker  ? help  │  {}",
-                    app.status
+                    "PREVIEW │ {}{} │ {} │ ↑↓ scroll e edit Ctrl+S save F2 picker ? help │ {}",
+                    file_label, dirty_mark, pos_label, app.status
                 )
             }
         }
         // File tree focus
         (Focus::Left, _, false) => {
-            format!("FILES  │  ↑↓ navigate  → preview  Enter open  D delete  N new  F5 copy  F6 move  F7 mkdir  │  {}", app.status)
+            format!("FILES │ ↑↓ navigate → preview Enter open D delete N new F5 copy F6 move F7 mkdir │ {}", app.status)
         }
         // Default
         _ => {
@@ -972,7 +1043,11 @@ fn draw_file_picker(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(Clear, popup);
 
     let block = Block::default()
-        .title(" File Picker ")
+        .title(format!(
+            " File Picker — {} ({} items) ",
+            app.picker_dir.display(),
+            app.picker_items.len()
+        ))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan))
         .style(Style::default().bg(Color::Black));
